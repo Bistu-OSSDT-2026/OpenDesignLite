@@ -1,0 +1,26 @@
+# Dependencies and build output
+target/
+node_modules/
+dist/
+build/
+.turbo/
+.next/
+
+# Local runtime data
+.odl/
+.tmp/
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Research clones and large upstream references
+external/
+
+# Secrets
+.env
+.env.*
+!.env.example

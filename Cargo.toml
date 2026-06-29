@@ -1,0 +1,13 @@
+[workspace]
+members = [
+  "crates/od-core",
+  "crates/od-cli",
+  "crates/od-mcp",
+  "crates/od-preview",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/open-design-lite/open-design-lite"
