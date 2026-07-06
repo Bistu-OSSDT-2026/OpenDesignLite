@@ -2,118 +2,71 @@
 
 **产品文档说「做什么」；架构文档说「怎么分层」；本目录说「接口长什么样」。**
 
-每份 spec 就绪后才应实现对应功能。写 spec 时保持：可测试、无歧义、一份真相。
+Specs 是实现前的一份真相。每份 spec 必须可测试、无歧义，并说明哪些内容仍是草案。
 
 ## 规范清单
 
 | Spec | 负责人 | 里程碑 | 状态 |
 |------|--------|--------|------|
-| [artifact-workspace](artifact-workspace.md) | Product & Kernel Lead | M1 | **待写** |
-| [preview](preview.md) | Preview Shell | M1 | **待写** |
-| [handoff](handoff.md) | Product & Kernel Lead | M1 | **待写** |
-| [cli](cli.md) | Product & Kernel Lead | M1 | **待写** |
-| [built-in-skills](built-in-skills.md) | Skills & Templates | M1 | **待写** |
-| [smoke-prompts](smoke-prompts.md) | Skills & Templates | M3 | **待写** |
-| [mcp](mcp.md) | Product & Kernel Lead | M2 | **待写** |
-| [export](export.md) | Export & Packaging | M4 | **待写** |
-| [release-checklist](release-checklist.md) | Product & Kernel Lead | M1 末 | **待写** |
+| [artifact-workspace](artifact-workspace.md) | Product & Kernel Lead | M1 | 草案 |
+| [preview](preview.md) | Preview Shell | M1 | 草案 |
+| [handoff](handoff.md) | Product & Kernel Lead | M1 | 草案 |
+| [cli](cli.md) | Product & Kernel Lead | M1 | 草案 |
+| [built-in-skills](built-in-skills.md) | Skills & Templates | M1 | 草案 |
+| [design-kernel](design-kernel.md) | Product & Kernel Lead + Skills | M1 | 草案 |
+| [release-checklist](release-checklist.md) | Product & Kernel Lead | M1 末 | 草案 |
+| [mcp](mcp.md) | Product & Kernel Lead | M2 | 草案 |
+| [smoke-prompts](smoke-prompts.md) | Skills & Templates | M3 | 草案 |
+| [export](export.md) | Export & Packaging | M4 | 草案 |
 
-## Spec 文档模板
+## 已采纳技术栈边界
 
-每份 spec 使用以下结构（复制到新文件）：
+| 层 | 默认技术 | 说明 |
+|----|----------|------|
+| CLI | `clap` | 子命令、help、退出码稳定优先 |
+| 错误 | app 层 `anyhow`，库层 `thiserror` | CLI 快速上下文 + core 稳定错误类型 |
+| 日志 | `tracing` | CLI、preview、MCP 共用结构化日志 |
+| 配置/manifest | `serde`、`serde_json`、`toml` | manifest 使用 JSON；用户配置可用 TOML |
+| 预览 | `wry` + 系统 WebView | M1 默认；外部浏览器是 fallback |
+| 文件监听 | `notify` + debounce | watcher 行为由 preview spec 约束 |
+| Markdown | `comrak` | Markdown → HTML |
+| Markdown 清洗 | `ammonia` | 只清洗 Markdown 渲染得到的 HTML |
+| 模板 | `minijinja` + `include_str!` | 预览包装、错误页、handoff、starter |
+| Design kernel | 手写 `od-design.css` + `--od-*` token | 不内置 UI runtime |
+| MCP | M2 使用 `rmcp` + `tokio` | 不把 async 泄漏进 `od-core` |
+| 发布 | `cargo-dist` | CLI 二进制发布；GUI 打包后置 |
 
-```markdown
-# <名称>
+## 明确禁止作为默认路径
 
-**状态**：草案 | 评审中 | 已定稿  
-**里程碑**：M?  
-**实现位置**：crates/... 或 skills/...
+- Electron、Node/Vite/Next dev server。
+- React、Tailwind、Radix、shadcn/ui、Lit/Web Components runtime 进入 `od-core`。
+- Playwright bundled browser、wkhtmltopdf、Pandoc、WeasyPrint 作为默认导出依赖。
+- 每个 template 自己发明 token、颜色、圆角、间距命名。
 
-## 目的
+## 编写与变更规则
 
-一段话说明规范解决什么问题。
+1. spec 字段变化必须同步相关架构文档或 ADR。
+2. M1 实现前，`artifact-workspace`、`preview`、`cli`、`handoff`、`built-in-skills`、`design-kernel` 必须至少评审一次。
+3. `mcp`、`export`、`smoke-prompts` 可先保持草案，但不得与 M1 已定字段冲突。
+4. 新增 runtime 依赖前必须能映射到本目录某份 spec。
 
-## 范围
+## 建议实现顺序
 
-- 包含 …
-- 不包含 …
-
-## 接口
-
-### 输入 / 输出
-
-（数据结构、文件布局、命令行、JSON schema）
-
-## 行为
-
-### 正常路径
-
-### 错误与退出码
-
-## 示例
-
-（最小可运行示例）
-
-## 测试
-
-（如何验证符合规范）
+```text
+1. artifact-workspace
+2. design-kernel
+3. built-in-skills
+4. cli
+5. preview
+6. handoff
+7. release-checklist
+8. mcp
+9. smoke-prompts
+10. export
+```
 
 ## 变更记录
 
 | 日期 | 变更 |
 |------|------|
-```
-
-## 建议编写顺序
-
-```text
-1. artifact-workspace  ─┐
-2. preview              ├─ M1 并行，但 artifact-workspace 应先定稿
-3. handoff              │
-4. cli                  ─┘
-5. built-in-skills
-6. mcp                  ── M2
-7. export               ── M4
-8. smoke-prompts        ── M3 前
-9. release-checklist      ── M1 出口
-```
-
-## 占位文件
-
-下方链接文件目前仅为锚点；编写时替换为完整 spec。
-
-### artifact-workspace
-
-→ [artifact-workspace.md](artifact-workspace.md)
-
-### preview
-
-→ [preview.md](preview.md)
-
-### handoff
-
-→ [handoff.md](handoff.md)
-
-### cli
-
-→ [cli.md](cli.md)
-
-### built-in-skills
-
-→ [built-in-skills.md](built-in-skills.md)
-
-### mcp
-
-→ [mcp.md](mcp.md)
-
-### export
-
-→ [export.md](export.md)
-
-### smoke-prompts
-
-→ [smoke-prompts.md](smoke-prompts.md)
-
-### release-checklist
-
-→ [release-checklist.md](release-checklist.md)
+| 2026-07-01 | 根据技术栈调研补齐 specs 草案，并新增 design-kernel spec。 |
