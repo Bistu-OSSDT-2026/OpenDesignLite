@@ -1,0 +1,31 @@
+//! MCP 错误码映射（对外契约）。
+//!
+//! Spec: docs/specs/mcp.md（错误格式）
+
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum McpError {
+    #[error("invalid args: {0}")]
+    InvalidArgs(String),
+    #[error("artifact not found: {0}")]
+    ArtifactNotFound(String),
+    #[error("manifest invalid: {0}")]
+    ManifestInvalid(String),
+    #[error("preview unavailable: {0}")]
+    PreviewUnavailable(String),
+    #[error("not implemented: {0}")]
+    NotImplemented(&'static str),
+}
+
+impl McpError {
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::InvalidArgs(_) => "invalid_args",
+            Self::ArtifactNotFound(_) => "artifact_not_found",
+            Self::ManifestInvalid(_) => "manifest_invalid",
+            Self::PreviewUnavailable(_) => "preview_unavailable",
+            Self::NotImplemented(_) => "not_implemented",
+        }
+    }
+}

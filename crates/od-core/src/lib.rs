@@ -1,50 +1,20 @@
-use std::path::{Path, PathBuf};
+//! od-core：Open Design Lite 内核。
+//!
+//! 拥有 artifact/workspace 路径、manifest schema、design kernel 语义、skill 模型、
+//! handoff 与稳定错误类型。入口层（od-cli / od-mcp / od-preview）必须复用这里的规则，
+//! 不得各自推断路径或重复实现 manifest 解析。
+//!
+//! Spec: docs/specs/{artifact-workspace,design-kernel,built-in-skills,handoff}.md
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ArtifactKind {
-    Html,
-    Markdown,
-    Slides,
-}
+pub mod artifact;
+pub mod design;
+pub mod error;
+pub mod handoff;
+pub mod manifest;
+pub mod paths;
+pub mod skill;
+pub mod workspace;
 
-impl ArtifactKind {
-    pub fn from_slug(value: &str) -> Option<Self> {
-        match value {
-            "html" | "html-page" => Some(Self::Html),
-            "docs" | "markdown" | "md" => Some(Self::Markdown),
-            "slides" | "ppt" | "deck" => Some(Self::Slides),
-            _ => None,
-        }
-    }
-
-    pub fn primary_file(self) -> &'static str {
-        match self {
-            Self::Html => "index.html",
-            Self::Markdown => "doc.md",
-            Self::Slides => "slides.html",
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Artifact {
-    pub kind: ArtifactKind,
-    pub root: PathBuf,
-}
-
-impl Artifact {
-    pub fn new(kind: ArtifactKind, root: impl Into<PathBuf>) -> Self {
-        Self {
-            kind,
-            root: root.into(),
-        }
-    }
-
-    pub fn primary_path(&self) -> PathBuf {
-        self.root.join(self.kind.primary_file())
-    }
-}
-
-pub fn workspace_manifest_path(root: impl AsRef<Path>) -> PathBuf {
-    root.as_ref().join("manifest.json")
-}
+pub use artifact::{Artifact, ArtifactKind};
+pub use error::{OdError, Result};
+pub use workspace::workspace_manifest_path;

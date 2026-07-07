@@ -6,3 +6,4 @@ license.workspace = true
 
 [dependencies]
 od-core = { path = "../od-core" }
+thiserror = "1"
