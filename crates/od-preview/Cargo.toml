@@ -7,3 +7,13 @@ license.workspace = true
 [dependencies]
 od-core = { path = "../od-core" }
 thiserror = "1"
+# WebView + 窗口事件循环
+wry = "0.48"
+tao = "0.31"
+# 文件监听
+notify = "6"
+# Markdown 渲染管线
+comrak = "0.26"
+ammonia = "4"
+# 外部浏览器 fallback
+open = "5"

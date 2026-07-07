@@ -10,4 +10,5 @@ path = "src/main.rs"
 
 [dependencies]
 od-core = { path = "../od-core" }
+od-preview = { path = "../od-preview" }
 clap = { version = "4", features = ["derive"] }
