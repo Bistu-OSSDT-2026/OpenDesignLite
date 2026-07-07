@@ -75,4 +75,6 @@ pub enum Command {
         #[arg(long)]
         out: Option<PathBuf>,
     },
+    /// 列出可用 skill。
+    Skill,
 }

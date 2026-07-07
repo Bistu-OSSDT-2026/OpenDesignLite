@@ -25,6 +25,9 @@ pub enum OdError {
     #[error("path escapes artifact root: {0}")]
     PathEscape(PathBuf),
 
+    #[error("skill front matter is invalid: {0}")]
+    SkillFrontMatterInvalid(String),
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -42,6 +45,7 @@ impl OdError {
             Self::ArtifactKindUnknown(_) => "artifact_kind_unknown",
             Self::AlreadyExists(_) => "already_exists",
             Self::PathEscape(_) => "path_escape",
+            Self::SkillFrontMatterInvalid(_) => "skill_front_matter_invalid",
             Self::Io(_) => "io_error",
             Self::NotImplemented(_) => "not_implemented",
         }

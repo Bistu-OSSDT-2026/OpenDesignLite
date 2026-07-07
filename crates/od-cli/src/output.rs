@@ -15,12 +15,31 @@ impl Reporter {
         }
     }
 
+    pub fn warn(&self, msg: &str) {
+        if !self.quiet && !self.json {
+            eprintln!("warning: {msg}");
+        }
+    }
+
+    pub fn json_value(&self, value: serde_json::Value) {
+        if self.json {
+            println!("{value}");
+        }
+    }
+
     /// 输出错误。JSON 模式写 stdout 信封，否则写 stderr。
-    /// M1 会用 serde_json 生成完整信封（含 path 等字段）；本次为最小占位。
     pub fn error(&self, code: &str, message: &str) {
         if self.json {
-            let message = message.replace('\\', "\\\\").replace('"', "\\\"");
-            println!("{{\"ok\":false,\"error\":{{\"code\":\"{code}\",\"message\":\"{message}\"}}}}");
+            println!(
+                "{}",
+                serde_json::json!({
+                    "ok": false,
+                    "error": {
+                        "code": code,
+                        "message": message,
+                    }
+                })
+            );
         } else {
             eprintln!("error[{code}]: {message}");
         }

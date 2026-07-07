@@ -19,7 +19,10 @@ pub fn to_manifest_path(rel: &Path) -> String {
 /// 确认 `child` 不通过 `..` 越出 artifact root。M1 会做更严格的规范化校验。
 pub fn ensure_within(root: &Path, child: &Path) -> Result<()> {
     let _ = root;
-    if child.components().any(|c| matches!(c, Component::ParentDir)) {
+    if child
+        .components()
+        .any(|c| matches!(c, Component::ParentDir))
+    {
         return Err(OdError::PathEscape(child.to_path_buf()));
     }
     Ok(())

@@ -10,6 +10,7 @@ mod output;
 use clap::Parser;
 use cli::{Cli, Command};
 use output::Reporter;
+use serde_json::json;
 
 fn main() {
     let args = Cli::parse();
@@ -28,10 +29,39 @@ fn dispatch(command: &Command, reporter: &Reporter) -> od_core::Result<()> {
     match command {
         Command::Init { dir, name, force } => {
             commands::init::run(dir, name.as_deref(), *force)?;
+            reporter.json_value(json!({"ok": true, "workspace": {"root": dir}}));
             reporter.info(&format!("initialized {}", dir.display()));
         }
-        Command::New { kind, dir, .. } => {
-            let artifact = commands::new::run(kind, dir)?;
+        Command::New {
+            kind,
+            dir,
+            title,
+            brief,
+            embed_css,
+            force,
+        } => {
+            let result = commands::new::run(
+                kind,
+                dir,
+                commands::new::NewOptions {
+                    title: title.as_deref(),
+                    brief,
+                    embed_css: *embed_css,
+                    force: *force,
+                },
+            )?;
+            for warning in &result.warnings {
+                reporter.warn(warning);
+            }
+            let artifact = result.artifact;
+            reporter.json_value(json!({
+                "ok": true,
+                "artifact": {
+                    "kind": artifact.kind.slug(),
+                    "root": artifact.root,
+                    "primaryFile": artifact.kind.primary_file(),
+                }
+            }));
             reporter.info(&format!("created {}", artifact.primary_path().display()));
         }
         Command::Preview { dir, .. } => {
@@ -40,10 +70,34 @@ fn dispatch(command: &Command, reporter: &Reporter) -> od_core::Result<()> {
             reporter.info("native shell preview is not implemented yet");
         }
         Command::Handoff { dir, stdout, agent } => {
-            commands::handoff::run(dir, agent, *stdout)?;
+            if let Some(rendered) = commands::handoff::run(dir, agent, *stdout)? {
+                println!("{rendered}");
+            } else {
+                reporter.info(&format!("updated {}", dir.join("handoff.md").display()));
+            }
         }
         Command::Export { dir, format, .. } => {
             commands::export::run(dir, format)?;
+        }
+        Command::Skill => {
+            let cwd = std::env::current_dir()?;
+            let skills = commands::skill::list(&cwd);
+            reporter.json_value(json!(skills
+                .iter()
+                .map(|skill| json!({
+                    "name": skill.front.name,
+                    "mode": skill.front.mode,
+                    "description": skill.front.description,
+                }))
+                .collect::<Vec<_>>()));
+            if !reporter.json {
+                for skill in skills {
+                    reporter.info(&format!(
+                        "{} | {} | {}",
+                        skill.front.name, skill.front.mode, skill.front.description
+                    ));
+                }
+            }
         }
     }
     Ok(())

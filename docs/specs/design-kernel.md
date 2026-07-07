@@ -205,3 +205,4 @@ M1 不要求实现复杂 alias、`$extends`、token transform。后续 adapter �
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-07 | primitive/recipe/pattern class 名、brief 视觉方向与推荐 pattern、反 AI slop 禁止项与质量标记落成 `crates/od-core/src/design`（`catalog`/`brief`/`guardrails`），作为 templates、skills、preview、smoke check 的单一来源。 |

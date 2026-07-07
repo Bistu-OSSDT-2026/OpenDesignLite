@@ -4,9 +4,12 @@
 //! Spec: docs/specs/design-kernel.md
 
 pub mod brief;
+pub mod catalog;
+pub mod guardrails;
 pub mod tokens;
 
 pub use brief::VisualBrief;
+pub use catalog::{ClassKind, PATTERNS, PRIMITIVES, RECIPES};
 
 /// design kernel 版本，写入 artifact manifest 的 `design.kernelVersion`。
 pub const KERNEL_VERSION: u32 = 1;

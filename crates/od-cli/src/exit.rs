@@ -24,7 +24,8 @@ pub fn code_for(err: &OdError) -> i32 {
         | OdError::PrimaryFileMissing(_)
         | OdError::ManifestInvalid { .. }
         | OdError::AlreadyExists(_)
-        | OdError::PathEscape(_) => INVALID_ARTIFACT,
+        | OdError::PathEscape(_)
+        | OdError::SkillFrontMatterInvalid(_) => INVALID_ARTIFACT,
         OdError::NotImplemented(_) => NOT_IMPLEMENTED,
         OdError::Io(_) => GENERAL,
     }
