@@ -2,6 +2,8 @@
 name: docs-polish
 mode: docs
 description: Polish Markdown docs while preserving the user's meaning and structure.
+template: templates/basic.md
+visualBrief: editorial
 ---
 
 Improve clarity, structure, and completeness. Preserve technical facts. Prefer concise headings, direct wording, and examples where they remove ambiguity.
