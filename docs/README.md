@@ -9,6 +9,7 @@
 | [product/prd.md](product/prd.md) | 做什么、不做什么、MVP 模式 |
 | [architecture/overview.md](architecture/overview.md) | 系统分层、模块边界、数据模型 |
 | [product/roadmap.md](product/roadmap.md) | 里程碑 M0–M3 |
+| [releases/](releases/) | 发布说明与已知限制 |
 | [decisions/](decisions/) | 已采纳的架构决策（ADR） |
 | [specs/](specs/) | 实现规范与接口契约 |
 | [team/plan.md](team/plan.md) | 5 人分工与接口变更规则 |
