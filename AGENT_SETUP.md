@@ -46,7 +46,7 @@ powershell -File scripts/build.ps1 build --release
 cargo run -p od-cli -- --help
 ```
 
-Expected: help text listing subcommands (`init`, `new`, `preview`, `export`, `handoff`, `skill`).
+Expected: help text listing subcommands (`init`, `new`, `preview`, `export`, `handoff`, `skill`, `mcp`).
 
 ### Step 4: Configure MCP
 
@@ -59,7 +59,7 @@ Add this MCP server configuration to the user's agent config file. Use the **abs
   "mcpServers": {
     "open-design-lite": {
       "command": "cargo",
-      "args": ["run", "-p", "od-mcp", "--", "mcp"],
+      "args": ["run", "-p", "od-cli", "--", "mcp"],
       "cwd": "$REPO_PATH"
     }
   }

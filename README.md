@@ -62,7 +62,7 @@ No separate app, no chat/preview shell to install — **the agent is your UI, th
 ## Prerequisites
 
 - **[Rust](https://rustup.rs/)** toolchain (stable, edition 2021)
-- **Windows** (primary target; macOS/Linux support tracked on roadmap)
+- **Windows** (primary target; macOS/Linux builds in CI — Linux preview may need WebKitGTK; see [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md))
 - A compatible coding agent (see [Agent Configuration](#agent-configuration))
 
 ---
@@ -83,13 +83,15 @@ cargo build --release
 powershell -File scripts/build.ps1 build --release
 ```
 
-The release binary will be at `target/release/odl.exe`.
+The release binary will be at `target/release/odl.exe` (Windows) or `target/release/odl` (Unix).
 
 ### Verify Installation
 
 ```powershell
 cargo run -p od-cli -- --help
 ```
+
+You should see subcommands: `init`, `new`, `preview`, `export`, `handoff`, `skill`, `mcp`.
 
 ---
 
@@ -116,10 +118,10 @@ cargo run -p od-cli -- new slides my-workspace/deck
 cargo run -p od-cli -- preview my-workspace/hello
 
 # Export an artifact
-cargo run -p od-cli -- export html my-workspace/hello   # self-contained HTML
-cargo run -p od-cli -- export md my-workspace/readme    # Markdown
-cargo run -p od-cli -- export zip my-workspace          # ZIP archive
-cargo run -p od-cli -- export pdf my-workspace/hello    # PDF (requires Chrome/Edge)
+cargo run -p od-cli -- export my-workspace/hello --format html   # self-contained HTML
+cargo run -p od-cli -- export my-workspace/readme --format md    # Markdown (docs only)
+cargo run -p od-cli -- export my-workspace --format zip          # ZIP archive
+cargo run -p od-cli -- export my-workspace/hello --format pdf    # PDF (requires Chrome/Edge)
 ```
 
 ### MCP Mode (Agent-Driven)
@@ -127,7 +129,7 @@ cargo run -p od-cli -- export pdf my-workspace/hello    # PDF (requires Chrome/E
 Start the MCP server for agent integration:
 
 ```powershell
-cargo run -p od-mcp -- mcp
+cargo run -p od-cli -- mcp
 # Or with the release binary:
 odl mcp
 ```
@@ -148,7 +150,7 @@ Add to `~/.claude/claude_desktop_config.json` or project `.mcp.json`:
   "mcpServers": {
     "open-design-lite": {
       "command": "cargo",
-      "args": ["run", "-p", "od-mcp", "--", "mcp"],
+      "args": ["run", "-p", "od-cli", "--", "mcp"],
       "cwd": "/path/to/OpenDesignLite"
     }
   }
@@ -166,7 +168,7 @@ Add to `opencode.json`:
   "mcp": {
     "open-design-lite": {
       "command": "cargo",
-      "args": ["run", "-p", "od-mcp", "--", "mcp"],
+      "args": ["run", "-p", "od-cli", "--", "mcp"],
       "workdir": "/path/to/OpenDesignLite"
     }
   }
@@ -184,7 +186,7 @@ Add to Cursor's MCP config (`~/.cursor/mcp.json`):
   "mcpServers": {
     "open-design-lite": {
       "command": "cargo",
-      "args": ["run", "-p", "od-mcp", "--", "mcp"],
+      "args": ["run", "-p", "od-cli", "--", "mcp"],
       "cwd": "/path/to/OpenDesignLite"
     }
   }
@@ -203,7 +205,7 @@ Add to Zed's `settings.json`:
     "open-design-lite": {
       "command": {
         "path": "cargo",
-        "args": ["run", "-p", "od-mcp", "--", "mcp"],
+        "args": ["run", "-p", "od-cli", "--", "mcp"],
         "work_dir": "/path/to/OpenDesignLite"
       }
     }
@@ -222,7 +224,7 @@ Configure as a stdio MCP server with:
   "mcpServers": {
     "open-design-lite": {
       "command": "cargo",
-      "args": ["run", "-p", "od-mcp", "--", "mcp"],
+      "args": ["run", "-p", "od-cli", "--", "mcp"],
       "cwd": "/path/to/OpenDesignLite"
     }
   }
@@ -271,8 +273,8 @@ Skills are filesystem directories with readable `SKILL.md` files that agents can
 OpenDesignLite/
 ├── crates/
 │   ├── od-core/        # Kernel: artifacts, design tokens, workspaces, skills
-│   ├── od-cli/         # CLI: init, new, preview, export, handoff, skill
-│   ├── od-mcp/         # MCP server: JSON-RPC over stdio (agent bridge)
+│   ├── od-cli/         # CLI: init, new, preview, export, handoff, skill, mcp
+│   ├── od-mcp/         # MCP implementation library (invoked via `odl mcp`)
 │   └── od-preview/     # Native WebView preview window with live-reload
 ├── docs/               # Documentation (中文): architecture, specs, ADRs, roadmap
 ├── skills/             # Built-in agent skills (SKILL.md per directory)
@@ -290,7 +292,7 @@ All detailed documentation is in the [`docs/`](docs/) directory (primarily in Ch
 
 | Document | Purpose |
 |----------|---------|
-| [docs/README.md](docs/README.md) | Documentation index and reading guide |
+| [docs/README.md](docs/README.md) | Chinese README (full project guide) |
 | [docs/product/prd.md](docs/product/prd.md) | Product scope, exclusions, MVP definition |
 | [docs/product/roadmap.md](docs/product/roadmap.md) | Milestones M0–M3 and release plan |
 | [docs/architecture/overview.md](docs/architecture/overview.md) | System layers, module boundaries, data model |
@@ -307,10 +309,10 @@ All detailed documentation is in the [`docs/`](docs/) directory (primarily in Ch
 |-----------|--------|-------|
 | **M0** – Repository Contract | ✅ Done | Docs, scaffold, minimal CLI, skill directories, starter templates |
 | **M1** – Local Artifact Loop | ✅ Done | `init`, `new html\|docs\|slides`, native preview with auto-refresh, handoff |
-| **M2** – Agent Bridging (MCP) | 🚧 Finishing | MCP server, agent config docs, end-to-end agent→preview loop |
-| **M3** – Export | 🚧 Finishing | HTML/MD/ZIP/PDF export, single-file HTML (planned) |
+| **M2** – Agent Bridging (MCP) | 🚧 Wrapping up | MCP server runnable; agent config and end-to-end client validation in progress |
+| **M3** – Export | ✅ Mostly done | HTML/MD/ZIP/PDF export shipped; single-file HTML (`--single-file`) planned |
 
-See [docs/product/roadmap.md](docs/product/roadmap.md) for details.
+See [docs/product/roadmap.md](docs/product/roadmap.md) and [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md) for details.
 
 ---
 
