@@ -15,7 +15,7 @@ Design defaults stay lightweight and framework-agnostic: CSS variables, static r
 
 No separate app, no chat/preview shell to install — the agent is your UI, the preview is just a window.
 
-> MCP transport is stdio and lands in **M2** (`crates/od-mcp`, currently scaffolded). See [docs/product/roadmap.md](docs/product/roadmap.md).
+> MCP lives in `crates/od-mcp`. Start it with `odl mcp` (JSON-RPC over stdio). `artifact_create` / `artifact_preview` / `artifact_handoff` / `artifact_export` are wired. Agent config docs and live client verification are the remaining M2 polish. See [docs/product/roadmap.md](docs/product/roadmap.md).
 
 ## Quick Start (scripting)
 

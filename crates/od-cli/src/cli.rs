@@ -67,9 +67,10 @@ pub enum Command {
         #[arg(long, default_value = "generic")]
         agent: String,
     },
-    /// 导出 artifact（M4）。
+    /// 导出 artifact。
     Export {
         dir: PathBuf,
+        /// `html` | `md` | `zip` | `pdf`。
         #[arg(long)]
         format: String,
         #[arg(long)]
@@ -83,6 +84,8 @@ pub enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// 启动 MCP stdio server。
+    Mcp,
 }
 
 #[derive(Subcommand, Debug)]

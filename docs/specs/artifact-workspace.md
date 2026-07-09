@@ -1,6 +1,6 @@
 # Artifact Workspace
 
-**状态**：草案  
+**状态**：部分实现  
 **里程碑**：M1  
 **实现位置**：`crates/od-core`
 
@@ -45,7 +45,7 @@
   "type": "workspace",
   "name": "my-workspace",
   "createdBy": "odl",
-  "createdAt": "2026-07-01T00:00:00Z"
+  "createdAt": "1783536000"
 }
 ```
 
@@ -57,7 +57,7 @@
 | `type` | string | 是 | 工作区固定为 `workspace`。 |
 | `name` | string | 是 | 默认取目录名。 |
 | `createdBy` | string | 是 | 固定为 `odl`。 |
-| `createdAt` | string | 是 | UTC ISO 8601。 |
+| `createdAt` | string | 是 | 当前实现写 Unix 秒字符串；如需 ISO 8601 需先改实现与测试。 |
 
 ## Artifact 布局
 
@@ -104,7 +104,7 @@ Artifact `manifest.json` 最小示例：
   "title": "Landing Page Draft",
   "primaryFile": "index.html",
   "createdBy": "odl",
-  "createdAt": "2026-07-01T00:00:00Z",
+  "createdAt": "1783536000",
   "design": {
     "kernelVersion": 1,
     "stylesheet": "assets/od-design.css",
@@ -123,7 +123,7 @@ Artifact `manifest.json` 最小示例：
 | `title` | string | 是 | 人类可读标题。 |
 | `primaryFile` | string | 是 | 必须与 kind 匹配。 |
 | `createdBy` | string | 是 | 固定为 `odl`。 |
-| `createdAt` | string | 是 | UTC ISO 8601。 |
+| `createdAt` | string | 是 | 当前实现写 Unix 秒字符串；如需 ISO 8601 需先改实现与测试。 |
 | `design` | object | 否 | design kernel 元数据。 |
 
 `design` 字段规则：
@@ -148,7 +148,7 @@ Artifact `manifest.json` 最小示例：
 index.html -> slides.html -> doc.md
 ```
 
-如果 `manifest.json` 存在，优先使用 `manifest.primaryFile`，但必须验证文件存在且 kind 匹配。若 manifest 缺失，允许按检测顺序推断 artifact kind，并在 CLI 输出 warning。
+当前预览与 handoff 按固定顺序检测主文件，不优先读取 `manifest.primaryFile`。后续若改为 manifest 优先，必须同步 `od-core`/`od-preview`/CLI/MCP 测试。
 
 ## 路径规则
 
@@ -181,3 +181,4 @@ index.html -> slides.html -> doc.md
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-08 | 对齐当前实现：`createdAt` 为 Unix 秒字符串，主文件检测不优先读 manifest。 |

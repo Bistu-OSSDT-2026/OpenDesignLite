@@ -46,6 +46,10 @@ handoff.md
 - Do not let a slide overflow; split or cut instead.
 - Keep transitions static by default.
 
+## Preview
+
+When the user asks to preview: call MCP `artifact_preview` with this artifact `dir`. Do **not** open a system browser yourself. Defaults (`externalBrowser` false, `watch` true) open the persistent live-reloading window. See [`preview-via-mcp`](../preview-via-mcp/SKILL.md).
+
 ## Self-check
 
 - [ ] Every slide fits inside its 16:9 frame.

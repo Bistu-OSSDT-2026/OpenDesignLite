@@ -36,6 +36,18 @@ pub enum OdError {
 
     #[error("not implemented: {0}")]
     NotImplemented(&'static str),
+
+    #[error("format unsupported: {0}")]
+    FormatUnsupported(String),
+
+    #[error("export failed: {0}")]
+    ExportFailed(String),
+
+    #[error("pdf backend missing: {0}")]
+    PdfBackendMissing(String),
+
+    #[error("resource missing: {0}")]
+    ResourceMissing(String),
 }
 
 impl OdError {
@@ -52,6 +64,10 @@ impl OdError {
             Self::SkillNotFound(_) => "skill_not_found",
             Self::Io(_) => "io_error",
             Self::NotImplemented(_) => "not_implemented",
+            Self::FormatUnsupported(_) => "format_unsupported",
+            Self::ExportFailed(_) => "export_failed",
+            Self::PdfBackendMissing(_) => "pdf_backend_missing",
+            Self::ResourceMissing(_) => "resource_missing",
         }
     }
 }

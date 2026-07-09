@@ -18,7 +18,7 @@
 - 预览：Tauri / Wry 等轻量 WebView（M1 前定 ADR）
 - 设计：极轻 design kernel，CSS variables + recipe，不绑 React/Tailwind
 - 集成：CLI、MCP、纯文件交接；插件后置
-- 模型：先跑通链路，BYOK 在 M3
+- 模型：不内置模型调用，只编排外部 Agent（见 [ADR 0003](../decisions/0003-no-built-in-model-calls.md)）
 
 详见 [docs/README.md](../README.md)。
 

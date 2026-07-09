@@ -1,8 +1,8 @@
 # MCP
 
-**状态**：草案  
+**状态**：部分实现（stdio server + create/preview/handoff/export handler 已接入；客户端配置说明与真实 Agent 联调仍待收尾）  
 **里程碑**：M2  
-**实现位置**：`crates/od-mcp`
+**实现位置**：`crates/od-mcp`（入口：`odl mcp`）
 
 ## 目的
 
@@ -10,24 +10,25 @@
 
 ## 技术栈
 
-| 能力 | 默认技术 |
-|------|----------|
-| MCP SDK | `rmcp` |
-| 异步 runtime | `tokio`，限制在 `od-mcp` 内 |
-| JSON | `serde`、`serde_json` |
-| Schema | `schemars`，如 SDK 需要 |
-| 日志 | `tracing` |
+| 能力 | 当前实现 | 说明 |
+|------|----------|------|
+| Transport | 手写 JSON-RPC over stdio（`Content-Length` framing） | `od_mcp::serve_stdio()`；由 `odl mcp` 启动 |
+| JSON | `serde`、`serde_json` | 请求/响应与 DTO |
+| Schema | `schemars` | `tools/list` 的 `inputSchema` |
+| 日志 | `tracing`（CLI 侧） | 不把 async 泄漏进 `od-core` |
 
-M2 默认 transport：stdio。
+原计划默认 SDK 为 `rmcp` + `tokio`。当前 M2 用同步手写 stdio server 先打通可连接路径；若后续迁到 `rmcp`，不得破坏现有 tool 名与 JSON 字段。
+
+已支持的 JSON-RPC methods：`initialize`、`ping`、`tools/list`、`tools/call`。
 
 ## Tools
 
 | Tool | 对应 CLI | 说明 |
 |------|----------|------|
-| `artifact_create` | `odl new` | 创建 artifact。 |
-| `artifact_preview` | `odl preview` | 打开本地预览。 |
-| `artifact_handoff` | `odl handoff` | 生成或读取 handoff。 |
-| `artifact_export` | `odl export` | M4 前可返回未实现。 |
+| `artifact_create` | `odl new` | 已接入 stdio `tools/call`。 |
+| `artifact_preview` | `odl preview` | spawn `odl preview` 子进程并立即返回；已接入。 |
+| `artifact_handoff` | `odl handoff` | 生成或读取 handoff；已接入。 |
+| `artifact_export` | `odl export` | 已接入；转发 `od-core::export`（html / md / zip / pdf）。 |
 
 ## `artifact_create`
 
@@ -57,6 +58,8 @@ M2 默认 transport：stdio。
 ```
 
 ## `artifact_preview`
+
+Coding agent 的**必选预览路径**：调用本工具打开持久、可 live-reload 的 `odl preview` 窗口。Agent 不得自行用系统浏览器打开产物（`start` / `xdg-open` / `open` / Playwright 等）。默认 `externalBrowser: false`（webview 窗口）、`watch: true`。
 
 输入：
 
@@ -100,6 +103,29 @@ M2 默认 transport：stdio。
 }
 ```
 
+## `artifact_export`
+
+输入：
+
+```json
+{
+  "dir": "D:/work/demo",
+  "format": "zip",
+  "out": "D:/work/demo.zip"
+}
+```
+
+`format`：`html` | `md` | `zip` | `pdf`。`out` 可选。
+
+输出：
+
+```json
+{
+  "out": "D:/work/demo.zip",
+  "format": "zip"
+}
+```
+
 ## 错误格式
 
 MCP SDK 的错误对象必须包含稳定 code：
@@ -110,7 +136,11 @@ MCP SDK 的错误对象必须包含稳定 code：
 | `artifact_not_found` | artifact 目录不存在。 |
 | `manifest_invalid` | manifest 无法解析。 |
 | `preview_unavailable` | 无法打开 WebView 或 fallback。 |
-| `not_implemented` | M4 功能尚未实现。 |
+| `format_unsupported` | artifact kind 不支持目标格式，或未知 format。 |
+| `export_failed` | 一般导出失败。 |
+| `pdf_backend_missing` | 找不到本机 Chrome/Edge PDF 后端。 |
+| `resource_missing` | 导出所需资源缺失。 |
+| `not_implemented` | 功能尚未实现。 |
 
 ## 安全
 
@@ -132,3 +162,7 @@ MCP SDK 的错误对象必须包含稳定 code：
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-08 | 对齐当前实现状态：DTO/schema/tool run 已有，stdio server 待接。 |
+| 2026-07-09 | 同步代码：`serve_stdio()` + `odl mcp` 已接入 create/preview/handoff；记录手写 JSON-RPC 与原 `rmcp` 计划的偏差。 |
+| 2026-07-09 | `artifact_export` 接入 html / md / zip / pdf。 |
+| 2026-07-09 | `artifact_preview` 说明：Agent 必选预览路径，默认不开系统浏览器。 |

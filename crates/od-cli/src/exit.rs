@@ -4,16 +4,16 @@
 
 use crate::error::CliError;
 use od_core::OdError;
+use od_mcp::error::McpError;
 use od_preview::PreviewError;
 
-// 完整退出码契约（cli.md）。部分码在 M1/M4 命令接线后才被引用，先保留。
+// 完整退出码契约（cli.md）。部分码在命令接线后才被引用，先保留。
 #[allow(dead_code)]
 pub const OK: i32 = 0;
 pub const GENERAL: i32 = 1;
 pub const USAGE: i32 = 2;
 pub const INVALID_ARTIFACT: i32 = 3;
 pub const PREVIEW_FAILED: i32 = 4;
-#[allow(dead_code)]
 pub const EXPORT_FAILED: i32 = 5;
 pub const NOT_IMPLEMENTED: i32 = 10;
 
@@ -22,6 +22,7 @@ pub fn code_for(err: &CliError) -> i32 {
     match err {
         CliError::Core(e) => code_for_core(e),
         CliError::Preview(e) => code_for_preview(e),
+        CliError::Mcp(e) => code_for_mcp(e),
     }
 }
 
@@ -33,7 +34,10 @@ fn code_for_core(err: &OdError) -> i32 {
         | OdError::ManifestInvalid { .. }
         | OdError::AlreadyExists(_)
         | OdError::PathEscape(_)
-        | OdError::SkillFrontMatterInvalid(_) => INVALID_ARTIFACT,
+        | OdError::SkillFrontMatterInvalid(_)
+        | OdError::FormatUnsupported(_)
+        | OdError::ResourceMissing(_) => INVALID_ARTIFACT,
+        OdError::ExportFailed(_) | OdError::PdfBackendMissing(_) => EXPORT_FAILED,
         OdError::NotImplemented(_) => NOT_IMPLEMENTED,
         OdError::Io(_) => GENERAL,
     }
@@ -46,6 +50,19 @@ fn code_for_preview(err: &PreviewError) -> i32 {
         | PreviewError::WebviewFailed(_)
         | PreviewError::WatchFailed(_)
         | PreviewError::FallbackFailed(_) => PREVIEW_FAILED,
+    }
+}
+
+fn code_for_mcp(err: &McpError) -> i32 {
+    match err {
+        McpError::InvalidArgs(_) => USAGE,
+        McpError::ArtifactNotFound(_)
+        | McpError::ManifestInvalid(_)
+        | McpError::FormatUnsupported(_)
+        | McpError::ResourceMissing(_) => INVALID_ARTIFACT,
+        McpError::PreviewUnavailable(_) => PREVIEW_FAILED,
+        McpError::ExportFailed(_) | McpError::PdfBackendMissing(_) => EXPORT_FAILED,
+        McpError::NotImplemented(_) => NOT_IMPLEMENTED,
     }
 }
 

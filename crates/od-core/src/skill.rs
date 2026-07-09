@@ -229,10 +229,17 @@ mod tests {
             SkillFrontMatter::parse(include_str!("../../../skills/docs-polish/SKILL.md")).unwrap();
         let slides =
             SkillFrontMatter::parse(include_str!("../../../skills/slides-html/SKILL.md")).unwrap();
+        let preview = SkillFrontMatter::parse(include_str!(
+            "../../../skills/preview-via-mcp/SKILL.md"
+        ))
+        .unwrap();
 
         assert_eq!(html.kind(), Some(ArtifactKind::Html));
         assert_eq!(docs.kind(), Some(ArtifactKind::Markdown));
         assert_eq!(slides.kind(), Some(ArtifactKind::Slides));
+        assert_eq!(preview.mode, "workflow");
+        assert_eq!(preview.kind(), None);
+        assert!(preview.body.contains("artifact_preview"));
     }
 
     #[test]

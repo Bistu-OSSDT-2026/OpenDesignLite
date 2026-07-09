@@ -1,6 +1,6 @@
 # CLI
 
-**状态**：草案  
+**状态**：部分实现（`export` 已接入 M3：html / md / zip / pdf）  
 **里程碑**：M1  
 **实现位置**：`crates/od-cli`
 
@@ -113,9 +113,45 @@ odl [GLOBAL_FLAGS] <COMMAND> [ARGS]
 
 ### `odl export <dir> --format <format>`
 
-M4 命令，M1 可占位返回 `not_implemented`。
+导出 artifact。实现位于 `od-core::export`，CLI 与 MCP 共用。
 
-参数见 [export.md](export.md)。
+参数：
+
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `dir` | 必填 | artifact 目录。 |
+| `--format` | 必填 | `html`、`md`、`zip`、`pdf`。 |
+| `--out` | 按格式默认 | 输出路径（目录或文件）。 |
+
+行为摘要见 [export.md](export.md)。`md` 仅支持 docs；`pdf` 依赖本机 Chrome/Edge headless（可用 `ODL_PDF_BROWSER` 覆盖）。
+
+### `odl skill [show <name>]`
+
+列出可用 skill，或输出某个 skill 的正文。
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `show <name>` | 无 | 输出指定 skill 的 `SKILL.md` 正文（front matter 之后）。 |
+| `--json` | false | 列表或 show 输出 JSON。也可使用全局 `--json`。 |
+
+行为：
+
+- 无 action 时列出 `name | mode | description`。
+- `show` 输出 skill 正文；JSON 模式包含 `name`、`mode`、`description`、`body`、`root`。
+- skill 发现复用 `od-core::skill::discover`，工作区同名 skill 覆盖内置 skill。
+
+### `odl mcp`
+
+启动 MCP stdio server（产品主入口的本地进程形态）。
+
+行为：
+
+- 调用 `od_mcp::serve_stdio()`，在 stdin/stdout 上提供 JSON-RPC（`Content-Length` framing）。
+- 支持 `initialize`、`ping`、`tools/list`、`tools/call`。
+- `tools/call` 已接 `artifact_create` / `artifact_preview` / `artifact_handoff` / `artifact_export`。
+- 详情见 [mcp.md](mcp.md)。
 
 ## JSON 输出
 
@@ -164,9 +200,14 @@ M4 命令，M1 可占位返回 `not_implemented`。
 - `odl new html tmp/artifact` 创建 `index.html`、`manifest.json`、`handoff.md`、`assets/od-design.css`。
 - `--json` 模式 stdout 可被 `serde_json` 解析。
 - 参数错误返回退出码 2。
+- `odl skill` 输出内置 skill，`odl skill show html-page` 输出正文。
+- `odl export --format zip|html` 写出可解压/可离线打开的产物；未知格式返回 `format_unsupported`。
 
 ## 变更记录
 
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-08 | 对齐当前 CLI：preview/handoff/skill 已实现，export 仍为 M3 占位。 |
+| 2026-07-09 | 补充 `odl mcp` 命令契约，与现有 stdio server 对齐。 |
+| 2026-07-09 | `odl export` 接入：html / md / zip / pdf（本机浏览器）。 |

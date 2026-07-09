@@ -1,6 +1,6 @@
 # Design Kernel
 
-**状态**：草案  
+**状态**：部分实现（class catalog、visual brief、guardrails、默认 stylesheet 已落地；token JSON 未落地）  
 **里程碑**：M1  
 **实现位置**：`crates/od-core`、`templates/`、`skills/`
 
@@ -19,14 +19,14 @@
 
 ## 默认资产
 
-M1 默认内置两类资产：
+目标上默认内置两类资产：
 
 ```text
 od-design.css          # 静态 CSS，写入 artifact assets/ 或 inline
 design-tokens.json     # 可选，供后续导出与 adapter 使用
 ```
 
-M1 实现可先只写出 `assets/od-design.css`。`design-tokens.json` 可以后置，但 token 命名必须按本文约束。
+当前实现写出 `assets/od-design.css` 或 inline CSS；`design-tokens.json` 仅保留常量与草案，尚未写入 artifact。
 
 ## CSS 变量
 
@@ -206,3 +206,4 @@ M1 不要求实现复杂 alias、`$extends`、token transform。后续 adapter �
 |------|------|
 | 2026-07-01 | 初版草案。 |
 | 2026-07-07 | primitive/recipe/pattern class 名、brief 视觉方向与推荐 pattern、反 AI slop 禁止项与质量标记落成 `crates/od-core/src/design`（`catalog`/`brief`/`guardrails`），作为 templates、skills、preview、smoke check 的单一来源。 |
+| 2026-07-08 | 对齐当前实现：默认 stylesheet 已由 `od-core::design::stylesheet` 写入；token JSON 仍未落地。 |

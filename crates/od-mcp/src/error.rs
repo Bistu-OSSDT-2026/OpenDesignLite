@@ -16,6 +16,14 @@ pub enum McpError {
     PreviewUnavailable(String),
     #[error("not implemented: {0}")]
     NotImplemented(&'static str),
+    #[error("format unsupported: {0}")]
+    FormatUnsupported(String),
+    #[error("export failed: {0}")]
+    ExportFailed(String),
+    #[error("pdf backend missing: {0}")]
+    PdfBackendMissing(String),
+    #[error("resource missing: {0}")]
+    ResourceMissing(String),
 }
 
 impl McpError {
@@ -26,6 +34,10 @@ impl McpError {
             Self::ManifestInvalid(_) => "manifest_invalid",
             Self::PreviewUnavailable(_) => "preview_unavailable",
             Self::NotImplemented(_) => "not_implemented",
+            Self::FormatUnsupported(_) => "format_unsupported",
+            Self::ExportFailed(_) => "export_failed",
+            Self::PdfBackendMissing(_) => "pdf_backend_missing",
+            Self::ResourceMissing(_) => "resource_missing",
         }
     }
 }

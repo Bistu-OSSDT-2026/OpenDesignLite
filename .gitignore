@@ -10,6 +10,7 @@ build/
 .odl/
 .tmp/
 *.log
+.odl-demo
 
 # OS/editor noise
 .DS_Store

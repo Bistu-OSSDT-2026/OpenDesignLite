@@ -7,6 +7,7 @@ use crate::{PreviewError, PreviewOptions};
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 use tao::{
+    dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
@@ -15,6 +16,10 @@ use wry::WebViewBuilder;
 
 /// 事件循环轮询通道的间隔。太短烧 CPU，太长 reload 滞后。50ms 折中。
 const RELOAD_POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+/// 预览窗口初始尺寸（逻辑像素）。窗口仍可自由缩放，只是首次打开给一个
+/// 适合看产物的标准大小，而不是 tao 默认的极小窗口。
+const DEFAULT_WINDOW_SIZE: LogicalSize<f64> = LogicalSize::new(1280.0, 800.0);
 
 /// 打开 WebView 并加载 `url`（M1 为 `file://` 主文件或渲染后的临时 HTML）。
 ///
@@ -29,6 +34,7 @@ pub fn open_webview(
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("Open Design Lite")
+        .with_inner_size(DEFAULT_WINDOW_SIZE)
         .build(&event_loop)
         .map_err(|e| PreviewError::WebviewFailed(format!("create window: {e}")))?;
 

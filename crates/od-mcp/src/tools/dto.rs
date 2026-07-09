@@ -95,8 +95,7 @@ pub struct HandoffResponse {
 
 // ─────────────────────────── artifact_export ───────────────────────────
 
-/// `artifact_export` 输入。M4 前未实现；DTO 先占位以保持 tools 一致性。
-/// 字段参照 CLI `odl export --format <f> --out <path>` 推断，待 spec 补齐。
+/// `artifact_export` 输入。对齐 CLI `odl export --format <f> --out <path>`。
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportRequest {
@@ -106,24 +105,37 @@ pub struct ExportRequest {
     pub out: Option<String>,
 }
 
-/// 导出格式枚举。M4 再定；`other` 用 `#[serde(other)]` 捕获未知值
-/// （不保留原始字符串，仅保证反序列化不报错）。
+/// 导出格式。对齐 export.md：`html` | `md` | `zip` | `pdf`。
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum ExportFormat {
-    Pdf,
     Html,
-    Pptx,
-    /// spec 未覆盖的格式。不保留原始值，M4 补齐后再扩展。
+    Md,
+    Zip,
+    Pdf,
+    /// 未识别格式；反序列化不报错，由 `run` 返回 `format_unsupported`。
     #[serde(other)]
     Other,
 }
 
-/// `artifact_export` 输出。M4 前无输出，占位。
+impl ExportFormat {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Html => "html",
+            Self::Md => "md",
+            Self::Zip => "zip",
+            Self::Pdf => "pdf",
+            Self::Other => "other",
+        }
+    }
+}
+
+/// `artifact_export` 输出。
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportResponse {
     pub out: String,
+    pub format: String,
 }
 
 // ───────────────────────────── 默认值 ──────────────────────────────────
@@ -237,7 +249,7 @@ mod tests {
         assert!(json["content"].as_str().unwrap().starts_with("# Handoff:"));
     }
 
-    /// export 请求反序列化（M4 前无 run，但 schema 要有，供 tools/list 一致性）。
+    /// export 请求反序列化。
     #[test]
     fn export_request_roundtrip() {
         let json = r#"{"dir": ".", "format": "pdf"}"#;
@@ -248,10 +260,18 @@ mod tests {
         let req2: ExportRequest = serde_json::from_str(json2).unwrap();
         assert!(matches!(req2.format, ExportFormat::Html));
 
-        // 未识别的格式 → Other（不报错）
-        let json3 = r#"{"dir": ".", "format": "docx"}"#;
+        let json3 = r#"{"dir": ".", "format": "zip"}"#;
         let req3: ExportRequest = serde_json::from_str(json3).unwrap();
-        assert!(matches!(req3.format, ExportFormat::Other));
+        assert!(matches!(req3.format, ExportFormat::Zip));
+
+        let json4 = r#"{"dir": ".", "format": "md"}"#;
+        let req4: ExportRequest = serde_json::from_str(json4).unwrap();
+        assert!(matches!(req4.format, ExportFormat::Md));
+
+        // 未识别的格式 → Other（不报错）
+        let json5 = r#"{"dir": ".", "format": "docx"}"#;
+        let req5: ExportRequest = serde_json::from_str(json5).unwrap();
+        assert!(matches!(req5.format, ExportFormat::Other));
     }
 
     /// 保证每个 DTO 生成 schemars schema 且能被序列化（非空）——供 tools/list 用。

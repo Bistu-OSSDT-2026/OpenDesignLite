@@ -2,22 +2,22 @@
 
 **产品文档说「做什么」；架构文档说「怎么分层」；本目录说「接口长什么样」。**
 
-Specs 是实现前的一份真相。每份 spec 必须可测试、无歧义，并说明哪些内容仍是草案。
+Specs 是实现契约。每份 spec 必须可测试、无歧义，并说明哪些内容仍是草案或已落地。
 
 ## 规范清单
 
 | Spec | 负责人 | 里程碑 | 状态 |
 |------|--------|--------|------|
-| [artifact-workspace](artifact-workspace.md) | Product & Kernel Lead | M1 | 草案 |
-| [preview](preview.md) | Preview | M1 | 草案 |
-| [handoff](handoff.md) | Product & Kernel Lead | M1 | 草案 |
-| [cli](cli.md) | Product & Kernel Lead | M1 | 草案 |
-| [built-in-skills](built-in-skills.md) | Skills & Templates | M1 | 草案 |
-| [design-kernel](design-kernel.md) | Product & Kernel Lead + Skills | M1 | 草案 |
-| [release-checklist](release-checklist.md) | Product & Kernel Lead | M1 末 | 草案 |
-| [mcp](mcp.md) | Product & Kernel Lead | M2 | 草案 |
-| [smoke-prompts](smoke-prompts.md) | Skills & Templates | M3 | 草案 |
-| [export](export.md) | Export & Packaging | M4 | 草案 |
+| [artifact-workspace](artifact-workspace.md) | Product & Kernel Lead | M1 | 部分实现 |
+| [preview](preview.md) | Preview | M1 | 已接入 CLI |
+| [handoff](handoff.md) | Product & Kernel Lead | M1 | 已接入 CLI/MCP run |
+| [cli](cli.md) | Product & Kernel Lead | M1 | 部分实现 |
+| [built-in-skills](built-in-skills.md) | Skills & Templates | M1 | 部分实现 |
+| [design-kernel](design-kernel.md) | Product & Kernel Lead + Skills | M1 | 部分实现 |
+| [release-checklist](release-checklist.md) | Product & Kernel Lead | M1 末 | M1 发布前检查清单 |
+| [mcp](mcp.md) | Product & Kernel Lead | M2 | stdio server + create/preview/handoff/export 已接入；客户端配置/联调待收尾 |
+| [smoke-prompts](smoke-prompts.md) | Skills & Templates | M2 | 草案 |
+| [export](export.md) | Export & Packaging | M3 | 已实现 |
 
 ## 已采纳技术栈边界
 
@@ -33,7 +33,7 @@ Specs 是实现前的一份真相。每份 spec 必须可测试、无歧义，�
 | Markdown 清洗 | `ammonia` | 只清洗 Markdown 渲染得到的 HTML |
 | 模板 | `minijinja` + `include_str!` | 预览包装、错误页、handoff、starter |
 | Design kernel | 手写 `od-design.css` + `--od-*` token | 不内置 UI runtime |
-| MCP | M2 使用 `rmcp` + `tokio` | 不把 async 泄漏进 `od-core` |
+| MCP | 手写 JSON-RPC stdio（`odl mcp`）；原计划可迁 `rmcp` | 不把 async 泄漏进 `od-core` |
 | 发布 | `cargo-dist` | CLI 二进制发布；GUI 打包后置 |
 
 ## 明确禁止作为默认路径
@@ -46,8 +46,8 @@ Specs 是实现前的一份真相。每份 spec 必须可测试、无歧义，�
 ## 编写与变更规则
 
 1. spec 字段变化必须同步相关架构文档或 ADR。
-2. M1 实现前，`artifact-workspace`、`preview`、`cli`、`handoff`、`built-in-skills`、`design-kernel` 必须至少评审一次。
-3. `mcp`、`export`、`smoke-prompts` 可先保持草案，但不得与 M1 已定字段冲突。
+2. 改动已实现字段时，必须同步相关 crate 注释或测试。
+3. `smoke-prompts` 可先保持草案；`mcp` / `export` 已实现字段变更不得破坏当前工具名与 JSON 字段。
 4. 新增 runtime 依赖前必须能映射到本目录某份 spec。
 
 ## 建议实现顺序

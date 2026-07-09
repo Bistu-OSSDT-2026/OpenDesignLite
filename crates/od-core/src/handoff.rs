@@ -75,8 +75,8 @@ pub fn render(artifact: &Artifact, agent: HandoffAgent) -> String {
 - Avoid AI-slop defaults: no blue-to-purple gradients, glassmorphism, random icons, remote fonts, or CDN UI kits.\n\
 - Keep the artifact previewable as plain files; do not add Tailwind, React, shadcn/ui, or a dev server unless a downstream adapter explicitly requires it.\n\n\
 ## How To Preview\n\n\
-- Run `odl preview {root}`.\n\
-- From the artifact directory, run `odl preview .`.\n\n\
+- **Coding agents (Open Design MCP):** call MCP tool `artifact_preview` with `dir` set to this artifact root. Keep defaults (`externalBrowser` false, `watch` true) so the persistent live-reloading preview window opens. Do **not** open a system browser yourself (`start`, `xdg-open`, `open`, Playwright, etc.).\n\
+- **CLI / humans:** run `odl preview {root}`, or from the artifact directory run `odl preview .`.\n\n\
 ## Next Steps\n\n\
 - Clarify the user goal, audience, and final delivery format.\n\
 - Edit `{primary_file}` directly and keep paths relative to the artifact root.\n\
@@ -98,18 +98,18 @@ fn agent_notes(agent: HandoffAgent) -> &'static str {
     match agent {
         HandoffAgent::Generic => GENERIC_AGENT_NOTES,
         HandoffAgent::OpenCode => {
-            "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. Run `odl preview .` from this directory to inspect changes. For OpenCode, prefer small patches and avoid adding runtime dependencies unless the artifact explicitly needs them."
+            "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. To preview, call MCP `artifact_preview` on this directory (do not open a system browser yourself); humans/scripts may use `odl preview .`. For OpenCode, prefer small patches and avoid adding runtime dependencies unless the artifact explicitly needs them."
         }
         HandoffAgent::ClaudeCode => {
-            "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. Run `odl preview .` from this directory to inspect changes. For Claude Code, keep generated sections easy for humans to review and update."
+            "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. To preview, call MCP `artifact_preview` on this directory (do not open a system browser yourself); humans/scripts may use `odl preview .`. For Claude Code, keep generated sections easy for humans to review and update."
         }
         HandoffAgent::Codex => {
-            "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. Run `odl preview .` from this directory to inspect changes. For Codex, avoid project-wide rewrites when a focused artifact edit is enough."
+            "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. To preview, call MCP `artifact_preview` on this directory (do not open a system browser yourself); humans/scripts may use `odl preview .`. For Codex, avoid project-wide rewrites when a focused artifact edit is enough."
         }
     }
 }
 
-const GENERIC_AGENT_NOTES: &str = "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. Run `odl preview .` from this directory to inspect changes.";
+const GENERIC_AGENT_NOTES: &str = "You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. To preview, call MCP `artifact_preview` on this directory (do not open a system browser yourself); humans/scripts may use `odl preview .`.";
 
 #[cfg(test)]
 mod tests {
@@ -127,6 +127,8 @@ mod tests {
         }
         assert!(rendered.contains("`index.html`"));
         assert!(rendered.contains("`odl preview .`"));
+        assert!(rendered.contains("artifact_preview"));
+        assert!(rendered.contains("Do **not** open a system browser"));
         assert!(rendered.contains("`--od-*` CSS variables"));
         assert!(rendered.contains("assets/od-design.css"));
     }

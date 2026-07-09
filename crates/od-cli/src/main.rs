@@ -82,8 +82,18 @@ fn dispatch(command: &Command, reporter: &Reporter) -> Result<()> {
                 reporter.info(&format!("updated {}", dir.join("handoff.md").display()));
             }
         }
-        Command::Export { dir, format, .. } => {
-            commands::export::run(dir, format)?;
+        Command::Export { dir, format, out } => {
+            let result = commands::export::run(dir, format, out.as_deref())?;
+            reporter.json_value(json!({
+                "ok": true,
+                "out": result.out,
+                "format": result.format.as_str(),
+            }));
+            reporter.info(&format!(
+                "exported {} → {}",
+                result.format.as_str(),
+                result.out.display()
+            ));
         }
         Command::Skill { action, json } => {
             let cwd = std::env::current_dir()?;
@@ -128,6 +138,9 @@ fn dispatch(command: &Command, reporter: &Reporter) -> Result<()> {
                     }
                 }
             }
+        }
+        Command::Mcp => {
+            od_mcp::serve_stdio()?;
         }
     }
     Ok(())

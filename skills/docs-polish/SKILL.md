@@ -36,6 +36,10 @@ handoff.md
 - Do not invent examples unless clearly flagged in handoff.
 - Keep the author's voice where it works.
 
+## Preview
+
+When the user asks to preview: call MCP `artifact_preview` with this artifact `dir`. Do **not** open a system browser yourself. Defaults (`externalBrowser` false, `watch` true) open the persistent live-reloading window. See [`preview-via-mcp`](../preview-via-mcp/SKILL.md).
+
 ## Self-check
 
 - [ ] Facts are unchanged.

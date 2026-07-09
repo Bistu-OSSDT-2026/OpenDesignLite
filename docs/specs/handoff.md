@@ -1,6 +1,6 @@
 # Handoff
 
-**状态**：草案  
+**状态**：已接入 CLI/MCP run（M1 整体重写策略仍保留）  
 **里程碑**：M1  
 **实现位置**：`crates/od-core`、`skills/*/SKILL.md`
 
@@ -22,7 +22,7 @@
 <artifact>/handoff.md
 ```
 
-`handoff.md` 是普通 Markdown 文件，可由用户编辑。刷新时不得无提示覆盖用户新增内容；M1 可采用整体重写，但必须在 CLI 输出 warning，M2 应做 section-level 更新。
+`handoff.md` 是普通 Markdown 文件，可由用户编辑。当前 CLI `odl handoff` 会整体重写；MCP `artifact_handoff` 在 `write=false` 时只读已有文件或仅返回渲染内容，`write=true` 时整体重写。后续若要保护用户编辑内容，应做 section-level 更新。
 
 ## 标准结构
 
@@ -52,7 +52,7 @@
 | `Artifact` | 是 | kind、主文件、root 路径。 |
 | `Files` | 是 | 关键文件列表。 |
 | `Design Notes` | 是 | visual brief、token/recipe 使用约束。 |
-| `How To Preview` | 是 | `odl preview <dir>` 命令。 |
+| `How To Preview` | 是 | Coding agent：MCP `artifact_preview`（默认不开系统浏览器）；人类/脚本：`odl preview <dir>`。 |
 | `Next Steps` | 是 | 建议后续任务。 |
 | `Agent Notes` | 是 | 外部 Agent 操作注意事项。 |
 
@@ -80,7 +80,7 @@
 默认文案：
 
 ```markdown
-You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. Run `odl preview .` from this directory to inspect changes.
+You can edit the files directly. Preserve the artifact layout and keep paths relative to the artifact root. If you add assets, place them under `assets/`. To preview, call MCP `artifact_preview` on this directory (do not open a system browser yourself); humans/scripts may use `odl preview .`.
 ```
 
 Agent-specific 只允许增加提示，不允许改变文件布局规则。
@@ -88,7 +88,7 @@ Agent-specific 只允许增加提示，不允许改变文件布局规则。
 ## 测试
 
 - 新建三类 artifact 时生成 handoff。
-- handoff 包含 preview 命令。
+- handoff 包含 preview 命令与 MCP `artifact_preview` 指引。
 - handoff 包含 design kernel 约束。
 - handoff 中列出的主文件与 manifest 一致。
 
@@ -97,3 +97,5 @@ Agent-specific 只允许增加提示，不允许改变文件布局规则。
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-08 | 对齐当前 CLI/MCP 行为：CLI 整体重写，MCP `write=false` 不落盘，`write=true` 重写。 |
+| 2026-07-09 | How To Preview / Agent Notes：Agent 走 MCP `artifact_preview`，禁止自行打开系统浏览器。 |

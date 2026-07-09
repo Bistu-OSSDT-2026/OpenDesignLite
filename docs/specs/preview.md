@@ -1,6 +1,6 @@
 # Preview
 
-**状态**：草案  
+**状态**：已接入 CLI（错误页细节仍需继续完善）  
 **里程碑**：M1  
 **实现位置**：`crates/od-preview`（由 `odl preview` 与 MCP `artifact_preview` 共用拉起）
 
@@ -120,6 +120,7 @@ Debounce 默认 100ms，可在实现中调整到 50-200ms。
 | `render_failed` | Markdown 渲染或模板包装失败。 |
 | `webview_failed` | WebView 初始化或加载失败。 |
 | `watch_failed` | watcher 初始化失败；允许继续无 watch 预览。 |
+| `fallback_failed` | 外部浏览器 fallback 失败。 |
 
 ## 外部浏览器 fallback
 
@@ -155,3 +156,4 @@ fallback 行为：
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-08 | 对齐当前实现：`odl preview` 已委托 `od-preview`，Markdown 写入 `.odl/preview.html`，新增 `fallback_failed` 错误码。 |

@@ -1,6 +1,6 @@
 # Release Checklist
 
-**状态**：草案  
+**状态**：M1 发布前检查清单  
 **里程碑**：M1 末  
 **实现位置**：N/A（流程文档）
 
@@ -59,7 +59,8 @@
 ## 已知可接受限制
 
 - PDF 导出未实现。
-- MCP 未实现。
+- MCP stdio server 已可启动（`odl mcp`），create/preview/handoff 已接；各 Agent 配置说明与真实客户端联调仍待收尾。
+- 当前 MCP transport 为手写 JSON-RPC，尚未迁到 `rmcp`。
 - Linux WebView 依赖可能需要用户安装。
 - Markdown 代码高亮可暂缺。
 - 自动更新暂缺。
@@ -69,3 +70,5 @@
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-08 | 对齐当前限制：MCP 不是完全未实现，而是 stdio server 待接。 |
+| 2026-07-09 | 同步代码：stdio server 与 create/preview/handoff 已接入；剩余为客户端配置/联调。 |

@@ -21,3 +21,7 @@ This repository is for a lightweight, local-first design assistant. Keep changes
 ## Current Decision
 
 The primary product surface is the **MCP tool surface**: coding agents drive `od-core` over MCP, and `artifact_preview` auto-launches a persistent, live-reloading preview window. The `odl` CLI is a scripting convenience over the same kernel. There is no separate chat/preview shell app.
+
+## Preview (agents)
+
+When previewing an artifact, call MCP `artifact_preview` with the artifact `dir`. Do **not** open a system/external browser yourself (`start`, `xdg-open`, `open`, Playwright, etc.). Keep defaults (`externalBrowser` false, `watch` true) so the MCP-managed `odl preview` window is used. See `skills/preview-via-mcp/SKILL.md`.

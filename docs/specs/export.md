@@ -1,8 +1,8 @@
 # Export
 
-**状态**：草案  
-**里程碑**：M4  
-**实现位置**：`crates/od-preview` 或后续 `crates/od-export`
+**状态**：已实现（M3：html 目录 / md / zip / pdf 本机浏览器）  
+**里程碑**：M3  
+**实现位置**：`crates/od-core/src/export.rs`（CLI / MCP 共用）
 
 ## 目的
 
@@ -21,7 +21,7 @@ odl export <artifact-dir> --format html|md|zip|pdf [--out <path>]
 | `--format` | 必填 | `html`、`md`、`zip`、`pdf`。 |
 | `--out` | 当前目录 | 输出路径。 |
 | `--single-file` | false | HTML 单文件导出，后续实现。 |
-| `--backend` | `auto` | PDF 后端选择，M4 定。 |
+| `--backend` | `auto` | PDF 后端选择，M3 定。 |
 
 ## 格式行为
 
@@ -52,7 +52,7 @@ ZIP 内路径必须使用 `/`。
 
 ## HTML 规则
 
-M4 初始只要求目录导出：
+M3 初始只要求目录导出：
 
 ```text
 export/
@@ -60,7 +60,7 @@ export/
   assets/
 ```
 
-单文件 HTML 后续可用 `lol_html` 做资源内联，但不作为 M4 的硬性入口条件。
+单文件 HTML 后续可用 `lol_html` 做资源内联，但不作为 M3 的硬性入口条件。
 
 ## PDF 规则
 
@@ -93,3 +93,4 @@ export/
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 初版草案。 |
+| 2026-07-09 | 实现落地到 `od-core::export`；pdf 走本机 Chrome/Edge headless。 |

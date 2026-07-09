@@ -50,10 +50,10 @@
 
 | Crate | 职责 | 状态 |
 |-------|------|------|
-| `od-core` | 产物类型、工作区路径、manifest 路径、领域原语 | 脚手架 |
-| `od-mcp` | MCP tool 注册与调用转发到内核（主入口） | 占位 |
-| `od-cli` | `odl` 子命令：`init` `new` `preview` `export` `handoff`（脚本化辅助） | 部分实现 |
-| `od-preview` | WebView 预览、文件监视、Markdown 渲染边界 | 占位 |
+| `od-core` | 产物类型、工作区路径、manifest、handoff、skill、design kernel 领域原语 | 部分实现 |
+| `od-mcp` | MCP tool 名、DTO/schema、tool-side `run()`、手写 JSON-RPC stdio server | 部分实现（export 已接入；客户端联调待收尾） |
+| `od-cli` | `odl` 子命令：`init` `new` `preview` `handoff` `skill` `mcp` `export`（脚本化辅助） | 部分实现（export 已接入） |
+| `od-preview` | WebView 预览、文件监视、Markdown 渲染边界 | 已接入 CLI |
 
 **依赖方向**：`od-mcp` / `od-cli` → `od-core` → 标准库 + 最小第三方依赖。`od-preview` 被 MCP 与 CLI 共用，由 `artifact_preview` / `odl preview` 拉起。
 
@@ -83,7 +83,7 @@ Design kernel 是内核中的设计语言层（token + layout primitive + compon
 | `docs` / `md` | `ArtifactKind::Markdown` | `doc.md` |
 | `slides` | `ArtifactKind::Slides` | `slides.html` |
 
-实现见 `crates/od-core/src/lib.rs`。完整字段规范待写：[specs/artifact-workspace.md](../specs/README.md#artifact-workspace)。
+实现见 `crates/od-core/src/artifact.rs`。完整字段规范见 [specs/artifact-workspace.md](../specs/artifact-workspace.md)。
 
 ### 工作区（Workspace）
 
@@ -108,7 +108,7 @@ skills/html-page/
   templates/          # 可选
 ```
 
-Front matter 最小字段：`name`、`mode`、`description`。完整协议待写：[specs/built-in-skills.md](../specs/README.md#built-in-skills)。
+Front matter 最小字段：`name`、`mode`、`description`。完整协议见 [specs/built-in-skills.md](../specs/built-in-skills.md)。
 
 内置技能：
 
@@ -132,7 +132,7 @@ odl preview <dir>
 |------|----------|
 | HTML / Slides | 系统 WebView，`file://` 加载 |
 | Markdown | 原生渲染 或 转静态 HTML 后 WebView |
-| PDF（M4） | WebView 打印/导出 |
+| PDF（导出） | 本机 Chrome/Edge headless `--print-to-pdf`（见 export） |
 
 **明确不做**：为产物启动 dev server；产物应自包含可离线打开。
 
@@ -144,7 +144,7 @@ odl preview <dir>
 | L2 CLI（脚本化辅助） | `odl new` `preview` `export` `handoff` | 脚本、自动化、无 MCP 场景 |
 | L1 文件（兜底） | `handoff.md` + 产物目录 | 任意 Agent，零集成 |
 
-MCP 是产品的主交付（M2）。M1 先跑通本地产物+预览闭环（L1+L2 的基础），MCP 在其上暴露同一套能力。内置模型调用在 M3，非 MVP 阻塞项。
+MCP 是产品的主交付（M2）。M1 本地产物+预览闭环已基本落地；M2 的 stdio server 与 create/preview/handoff handler 已接入（`odl mcp`），剩余是各 Agent 配置说明与真实客户端联调。内置模型调用已放弃：v1 只编排外部 Agent（见 [ADR 0003](../decisions/0003-no-built-in-model-calls.md)）。
 
 ## CLI 命令（目标契约）
 
@@ -154,22 +154,24 @@ MCP 是产品的主交付（M2）。M1 先跑通本地产物+预览闭环（L1+L
 |------|------|------|
 | `odl init [dir]` | 创建工作区 | ✓ |
 | `odl new <kind> <dir>` | 创建产物 + starter + handoff | ✓ |
-| `odl preview <dir>` | 打开预览 | 占位 |
-| `odl export <dir> --format …` | 导出 | 未实现 |
-| `odl handoff <dir>` | 输出/刷新 handoff | 未实现 |
+| `odl preview <dir>` | 打开 WebView 或外部浏览器预览 | ✓ |
+| `odl handoff <dir>` | 输出/刷新 handoff | ✓ |
+| `odl skill [show <name>]` | 列出或查看 skill | ✓ |
+| `odl mcp` | 启动 MCP stdio server | ✓ |
+| `odl export <dir> --format …` | 导出 html / md / zip / pdf | ✓ |
 
-完整 flags 与退出码：[specs/cli.md](../specs/README.md#cli)。
+完整 flags 与退出码见 [specs/cli.md](../specs/cli.md)。
 
 ## MCP 工具（目标契约）
 
-| Tool | 对应 CLI | 里程碑 |
-|------|----------|--------|
-| `artifact_create` | `new` | M2 |
-| `artifact_preview` | `preview` | M2 |
-| `artifact_export` | `export` | M2 |
-| `artifact_handoff` | `handoff` | M2 |
+| Tool | 对应 CLI | 当前状态 |
+|------|----------|----------|
+| `artifact_create` | `new` | stdio `tools/call` 已接入 |
+| `artifact_preview` | `preview` | stdio 已接入；spawn `odl preview` |
+| `artifact_handoff` | `handoff` | stdio 已接入 |
+| `artifact_export` | `export` | stdio 已接入；转发 `od-core::export` |
 
-详情：[specs/mcp.md](../specs/README.md#mcp)。
+详情见 [specs/mcp.md](../specs/mcp.md)。
 
 ## 为何用 MCP 优先，而非壳层或插件优先
 
@@ -185,11 +187,10 @@ MCP 是产品的主交付（M2）。M1 先跑通本地产物+预览闭环（L1+L
 |----|------|----------|
 | 预览 WebView | Wry + Tao（M1 已采用），其他 Rust WebView 备选 | M1 preview spike |
 | Markdown 渲染 | 内置 crate vs 转 HTML | M1 |
-| 模型调用 | v1 仅编排外部 Agent vs 内置 BYOK | M3 前 ADR |
 
 ## 相关文档
 
 - [boundaries.md](boundaries.md) — 模块边界与变更规则
 - [product/prd.md](../product/prd.md) — 产品范围
 - [research/design-system-kernel.md](../research/design-system-kernel.md) — 轻量设计内核调研
-- [specs/](../specs/) — 实现级契约（待编写）
+- [specs/](../specs/) — 实现级契约

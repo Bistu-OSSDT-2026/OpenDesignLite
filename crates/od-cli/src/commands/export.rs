@@ -1,10 +1,12 @@
-//! `odl export`：导出 artifact（M4）。占位返回 not_implemented（退出码 10）。
+//! `odl export`：导出 artifact（html / md / zip / pdf）。
 //!
 //! Spec: docs/specs/cli.md, export.md
 
-use od_core::{OdError, Result};
+use od_core::export::{self, ExportFormat, ExportOptions, ExportResult};
+use od_core::Result;
 use std::path::Path;
 
-pub fn run(_root: &Path, _format: &str) -> Result<()> {
-    Err(OdError::NotImplemented("odl export (M4)"))
+pub fn run(root: &Path, format: &str, out: Option<&Path>) -> Result<ExportResult> {
+    let format = ExportFormat::parse(format)?;
+    export::run(root, format, ExportOptions { out })
 }

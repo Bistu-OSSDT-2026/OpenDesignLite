@@ -1,6 +1,6 @@
 # Built-in Skills
 
-**状态**：草案（2026-07-07 补充 Rust 模型与接入流程）  
+**状态**：部分实现（skill 发现、`odl new` 接入、`odl skill show` 已有；模板去重仍待做）  
 **里程碑**：M1  
 **实现位置**：`skills/`、`templates/`、`crates/od-core/src/skill.rs`、`crates/od-cli`
 
@@ -34,6 +34,8 @@ skills/
     SKILL.md
     templates/
       basic.html
+  preview-via-mcp/
+    SKILL.md           # workflow：Agent 预览走 MCP，无模板
 templates/
   od-design.css        # 公共 design kernel starter，非任何 skill 专属
 ```
@@ -75,6 +77,9 @@ M1 解析只要求前三个字段。额外字段必须忽略而不是报错。
 | `html-page` | `html` | `html` | `index.html` | `editorial` |
 | `docs-polish` | `docs` | `docs` | `doc.md` | `editorial` |
 | `slides-html` | `slides` | `slides` | `slides.html` | `studio` |
+| `preview-via-mcp` | `workflow` | （无） | — | — |
+
+`preview-via-mcp` 是跨 kind 的工作流提示：要求 coding agent 用 MCP `artifact_preview` 预览，禁止自行打开系统浏览器。`mode: workflow` 不映射到 `ArtifactKind`，不参与 `odl new` / `for_kind`。
 
 ## Rust 模型
 
@@ -182,11 +187,11 @@ M1 保留 fallback；后续稳定后可移除，改为 skill 缺失即报错。
 
 ### Flag 接入
 
-`cli.rs` 已定义 `--title` / `--brief` / `--embed-css` / `--force`，但 `main.rs` dispatch 当前未传递。实现时需把四项传入 `new::run`。
+`cli.rs` 定义的 `--title` / `--brief` / `--embed-css` / `--force` 已由 `main.rs` dispatch 传入 `new::run`。
 
 ### 内置 skill 目录定位
 
-`include_str!` 是编译期嵌入，但 skill 发现要运行期读磁盘。M1 用 `env!("CARGO_MANIFEST_DIR")` 拼路径（开发期可用）；发布期嵌入问题留到 M4 打包（候选：`include_dir!` 把 skills/ 嵌进二进制）。
+`include_str!` 是编译期嵌入，但 skill 发现要运行期读磁盘。M1 用 `env!("CARGO_MANIFEST_DIR")` 拼路径（开发期可用）；发布期嵌入问题留到 M3 打包（候选：`include_dir!` 把 skills/ 嵌进二进制）。
 
 ## `odl skill` 命令
 
@@ -197,7 +202,7 @@ odl skill            # 列出 name | mode | description
 odl skill --json     # 输出 JSON 数组
 ```
 
-M1 只做列表；`skill show <name>`（输出 SKILL.md 正文，供 agent 消费）留到 M2。
+当前已实现列表与 `skill show <name>`；`show` 输出 `SKILL.md` 正文（front matter 之后），JSON 模式包含正文和 skill 根目录。
 
 ## 质量标准
 
@@ -208,7 +213,8 @@ M1 只做列表；`skill show <name>`（输出 SKILL.md 正文，供 agent 消�
 - 默认不引入 React、Tailwind、shadcn/ui、CDN UI kit。
 - HTML / Slides 使用 design kernel token 或静态 CSS。
 - Markdown 保持事实准确，避免改写技术含义。
-- 输出必须能被 `odl preview` 预览。
+- 输出必须能被 `odl preview` / MCP `artifact_preview` 预览。
+- Coding agent 预览时调用 MCP `artifact_preview`，不自行打开系统浏览器（见 `preview-via-mcp`）。
 
 ## 模板规则
 
@@ -224,13 +230,13 @@ M1 只做列表；`skill show <name>`（输出 SKILL.md 正文，供 agent 消�
 
 | 要求 | 测试类型 | 落点 | 断言 |
 |------|----------|------|------|
-| 每个 `SKILL.md` front matter 可解析 | `od-core` 单测 | `skill.rs` | `SkillFrontMatter::parse` 对三个内置 SKILL.md 内容解析成功，字段值正确 |
-| `mode` 能映射到 artifact kind | `od-core` 单测 | `skill.rs` | `kind()` 对 `html`/`docs`/`slides` 三种 mode 返回对应 `ArtifactKind` |
+| 每个 `SKILL.md` front matter 可解析 | `od-core` 单测 | `skill.rs` | `SkillFrontMatter::parse` 对内置 SKILL.md（含 `preview-via-mcp`）解析成功，字段值正确 |
+| `mode` 能映射到 artifact kind | `od-core` 单测 | `skill.rs` | `kind()` 对 `html`/`docs`/`slides` 三种 mode 返回对应 `ArtifactKind`；`workflow` 返回 `None` |
 | 每个 template 可被复制为 artifact 主文件 | 集成测 | `od-cli` | `odl new` 用 skill 模板生成产物，主文件存在且非空 |
 | HTML / slides template 无默认 CDN 依赖 | `od-core` 单测 | 扫 `skills/**/templates/*.html` | 断言无 `<script src="https://` 与 `<link href="https://`（允许相对路径） |
 | workspace 覆盖生效 | `od-core` 单测 | `discover` 用 tempdir | 同名 skill 时 workspace 版本优先，结果 name 唯一 |
 | fallback 保留 | 集成测 | `od-cli` | skill 缺失时 `odl new` 仍生成 starter 主文件，且输出 warning |
-| `odl skill` 列表 | 集成测 | `od-cli` | `odl skill` 输出三行，`--json` 输出可被 `serde_json` 解析的数组 |
+| `odl skill` 列表 | 集成测 | `od-cli` | `odl skill` 列出全部内置 skill（含 `preview-via-mcp`），`--json` 输出可被 `serde_json` 解析的数组 |
 
 ## 变更记录
 
@@ -238,3 +244,5 @@ M1 只做列表；`skill show <name>`（输出 SKILL.md 正文，供 agent 消�
 |------|------|
 | 2026-07-01 | 初版草案。 |
 | 2026-07-07 | 补 Rust 模型（`Skill` / `discover` / `for_kind`）、解析器约束、workspace 覆盖规则、`odl new` 接入流程与 fallback、`odl skill` 命令；模板收进 skill 目录；测试落成可执行表。 |
+| 2026-07-08 | 对齐当前实现：`odl new` flags 已接入，`odl skill show` 已实现，模板去重仍未完成。 |
+| 2026-07-09 | 新增 `preview-via-mcp` workflow skill：Agent 预览走 MCP `artifact_preview`。 |

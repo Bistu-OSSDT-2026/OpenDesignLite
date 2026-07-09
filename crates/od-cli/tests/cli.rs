@@ -114,7 +114,8 @@ fn skill_lists_builtin_skills_and_json_is_parseable() {
         .success()
         .stdout(predicate::str::contains("html-page | html"))
         .stdout(predicate::str::contains("docs-polish | docs"))
-        .stdout(predicate::str::contains("slides-html | slides"));
+        .stdout(predicate::str::contains("slides-html | slides"))
+        .stdout(predicate::str::contains("preview-via-mcp | workflow"));
 
     let output = odl()
         .args(["--json", "skill"])
@@ -125,7 +126,7 @@ fn skill_lists_builtin_skills_and_json_is_parseable() {
         .clone();
     let value: Value = serde_json::from_slice(&output).unwrap();
 
-    assert_eq!(value.as_array().unwrap().len(), 3);
+    assert_eq!(value.as_array().unwrap().len(), 4);
 
     let output = odl()
         .args(["skill", "--json"])
@@ -135,7 +136,7 @@ fn skill_lists_builtin_skills_and_json_is_parseable() {
         .stdout
         .clone();
     let value: Value = serde_json::from_slice(&output).unwrap();
-    assert_eq!(value.as_array().unwrap().len(), 3);
+    assert_eq!(value.as_array().unwrap().len(), 4);
 }
 
 #[test]
@@ -167,4 +168,104 @@ fn skill_show_unknown_is_usage_error() {
         .code(2)
         .stderr(predicate::str::contains("skill_not_found"))
         .stderr(predicate::str::contains("nope"));
+}
+
+#[test]
+fn export_zip_creates_archive() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("artifact");
+    let out = temp.path().join("artifact.zip");
+
+    odl()
+        .args(["new", "html", root.to_str().unwrap(), "--title", "Zip"])
+        .assert()
+        .success();
+
+    odl()
+        .args([
+            "export",
+            root.to_str().unwrap(),
+            "--format",
+            "zip",
+            "--out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    assert!(out.exists());
+    assert!(out.metadata().unwrap().len() > 0);
+}
+
+#[test]
+fn export_html_directory_is_offline_openable() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("artifact");
+    let out = temp.path().join("export");
+
+    odl()
+        .args(["new", "html", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    odl()
+        .args([
+            "export",
+            root.to_str().unwrap(),
+            "--format",
+            "html",
+            "--out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    assert!(out.join("index.html").exists());
+    assert!(out.join("assets").join("od-design.css").exists());
+}
+
+#[test]
+fn export_unsupported_format_returns_error() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("artifact");
+
+    odl()
+        .args(["new", "html", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    odl()
+        .args([
+            "export",
+            root.to_str().unwrap(),
+            "--format",
+            "pptx",
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("format_unsupported"));
+}
+
+#[test]
+fn export_md_unsupported_for_html() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("artifact");
+
+    odl()
+        .args(["new", "html", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    odl()
+        .args([
+            "export",
+            root.to_str().unwrap(),
+            "--format",
+            "md",
+            "--out",
+            temp.path().join("out.md").to_str().unwrap(),
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("format_unsupported"));
 }

@@ -12,6 +12,7 @@
 //! spec 契约码原样传到用户输出（`--json` 与 MCP 复用）。
 
 use od_core::OdError;
+use od_mcp::error::McpError;
 use od_preview::PreviewError;
 
 #[derive(Debug)]
@@ -20,6 +21,8 @@ pub enum CliError {
     Core(OdError),
     /// 预览错误（preview 命令产生）。
     Preview(PreviewError),
+    /// MCP server 错误（mcp 命令产生）。
+    Mcp(McpError),
 }
 
 impl CliError {
@@ -28,6 +31,7 @@ impl CliError {
         match self {
             CliError::Core(e) => e.code(),
             CliError::Preview(e) => e.code(),
+            CliError::Mcp(e) => e.code(),
         }
     }
 }
@@ -37,6 +41,7 @@ impl std::fmt::Display for CliError {
         match self {
             CliError::Core(e) => std::fmt::Display::fmt(e, f),
             CliError::Preview(e) => std::fmt::Display::fmt(e, f),
+            CliError::Mcp(e) => std::fmt::Display::fmt(e, f),
         }
     }
 }
@@ -46,6 +51,7 @@ impl std::error::Error for CliError {
         match self {
             CliError::Core(e) => Some(e),
             CliError::Preview(e) => Some(e),
+            CliError::Mcp(e) => Some(e),
         }
     }
 }
@@ -65,6 +71,12 @@ impl From<std::io::Error> for CliError {
 impl From<PreviewError> for CliError {
     fn from(e: PreviewError) -> Self {
         CliError::Preview(e)
+    }
+}
+
+impl From<McpError> for CliError {
+    fn from(e: McpError) -> Self {
+        CliError::Mcp(e)
     }
 }
 
