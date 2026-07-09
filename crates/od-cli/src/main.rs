@@ -4,11 +4,13 @@
 
 mod cli;
 mod commands;
+mod error;
 mod exit;
 mod output;
 
 use clap::Parser;
 use cli::{Cli, Command};
+use error::Result;
 use output::Reporter;
 use serde_json::json;
 
@@ -25,7 +27,7 @@ fn main() {
     }
 }
 
-fn dispatch(command: &Command, reporter: &Reporter) -> od_core::Result<()> {
+fn dispatch(command: &Command, reporter: &Reporter) -> Result<()> {
     match command {
         Command::Init { dir, name, force } => {
             commands::init::run(dir, name.as_deref(), *force)?;
@@ -64,10 +66,14 @@ fn dispatch(command: &Command, reporter: &Reporter) -> od_core::Result<()> {
             }));
             reporter.info(&format!("created {}", artifact.primary_path().display()));
         }
-        Command::Preview { dir, .. } => {
-            let target = commands::preview::run(dir)?;
-            reporter.info(&format!("preview target: {}", target.display()));
-            reporter.info("native shell preview is not implemented yet");
+        Command::Preview {
+            dir,
+            external_browser,
+            no_watch,
+            devtools,
+        } => {
+            // no_watch 是用户视角否定式，翻转成 watch 肯定式。
+            commands::preview::run(dir, *external_browser, !*no_watch, *devtools)?;
         }
         Command::Handoff { dir, stdout, agent } => {
             if let Some(rendered) = commands::handoff::run(dir, agent, *stdout)? {
