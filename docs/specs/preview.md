@@ -2,7 +2,7 @@
 
 **状态**：草案  
 **里程碑**：M1  
-**实现位置**：`crates/od-preview`、`apps/shell`
+**实现位置**：`crates/od-preview`（由 `odl preview` 与 MCP `artifact_preview` 共用拉起）
 
 ## 目的
 
@@ -16,7 +16,7 @@
 - 包含文件监听与刷新策略。
 - 包含错误页与 fallback。
 - 不包含 PDF 导出，见 [export.md](export.md)。
-- 不包含 shell 完整产品 UI。
+- 预览是一个纯粹的产物预览窗口，不含产品级交互 UI（交互发生在编码 Agent 里）。
 
 ## 技术栈
 
@@ -136,9 +136,9 @@ fallback 行为：
 
 ## 安全规则
 
-- 预览页面不得获得 shell、文件系统、命令执行 IPC。
+- 预览页面不得获得 MCP、文件系统、命令执行 IPC。
 - `file://` 预览只用于 artifact 自身文件和相对 assets。
-- 外部链接默认由 WebView 处理；后续 shell 可选择用系统浏览器打开。
+- 外部链接默认由 WebView 处理；也可选择用系统浏览器打开。
 - 不注入可执行 native bridge。
 
 ## 测试

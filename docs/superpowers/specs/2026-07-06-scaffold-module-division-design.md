@@ -77,7 +77,7 @@ tools/{create,preview,handoff,export}.rs  工具签名       [mcp]
 ## 不在本次范围
 
 - M1 完整逻辑（真实 manifest 写入 spec schema、design kernel CSS 生成、真实预览/watch）。
-- `apps/shell`、`apps/extensions`（非 crate，保持 README 占位）。
+- `apps/`（原 `shell` / `extensions` 占位）——已随 MCP 优先 / Agent 驱动定位移除，见 [ADR 0001](../../decisions/0001-binary-shell-first.md)。
 - `skills/`、`templates/`（目录形态已符合 built-in-skills spec）。
 
 ## 依赖方向（不变）

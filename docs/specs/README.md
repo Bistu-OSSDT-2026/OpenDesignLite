@@ -9,7 +9,7 @@ Specs 是实现前的一份真相。每份 spec 必须可测试、无歧义，�
 | Spec | 负责人 | 里程碑 | 状态 |
 |------|--------|--------|------|
 | [artifact-workspace](artifact-workspace.md) | Product & Kernel Lead | M1 | 草案 |
-| [preview](preview.md) | Preview Shell | M1 | 草案 |
+| [preview](preview.md) | Preview | M1 | 草案 |
 | [handoff](handoff.md) | Product & Kernel Lead | M1 | 草案 |
 | [cli](cli.md) | Product & Kernel Lead | M1 | 草案 |
 | [built-in-skills](built-in-skills.md) | Skills & Templates | M1 | 草案 |

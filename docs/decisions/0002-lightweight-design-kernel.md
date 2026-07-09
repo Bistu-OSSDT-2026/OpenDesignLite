@@ -6,7 +6,7 @@
 
 ## 背景
 
-产品需要让 HTML、文档、幻灯片在本地预览时默认更好看，但 `od-core` 的首要约束仍是轻量、本地优先、框架无关。若直接内置现成 UI kit，会引入 React、Tailwind、Web Components、Lit 或 Node 工具链，和二进制壳层优先的路线冲突。
+产品需要让 HTML、文档、幻灯片在本地预览时默认更好看，但 `od-core` 的首要约束仍是轻量、本地优先、框架无关。若直接内置现成 UI kit，会引入 React、Tailwind、Web Components、Lit 或 Node 工具链，和轻量、本地优先的路线冲突（见 [ADR 0001](0001-binary-shell-first.md)）。
 
 调研见 [design-system-kernel.md](../research/design-system-kernel.md)；工程执行层补充见 [design-core-engineering-choice.md](../research/design-core-engineering-choice.md)。
 

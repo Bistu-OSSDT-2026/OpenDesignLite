@@ -2,7 +2,7 @@
 
 ## 核心决策
 
-**二进制壳层优先，插件其次。** CLI 与 MCP 是稳定集成契约；编辑器扩展是薄适配层。
+**MCP 优先，Agent 驱动。** 主产品面是 MCP 工具面：编码 Agent 经 MCP 驱动 `od-core`，`artifact_preview` 自动拉起常驻、实时刷新的预览窗口。CLI 是脚本化辅助，与 MCP 复用同一内核。不做独立壳层 app，也不做编辑器专用插件。
 
 **Design kernel 极轻且框架无关。** `od-core` 表达 token、layout primitive、component recipe 与 pattern guideline，不内置 React、Tailwind、Radix、shadcn/ui 或 Web Components runtime。
 
@@ -15,6 +15,7 @@
 | 本地优先 | 默认无网络；产物在磁盘 |
 | 文件即接口 | 人类与 Agent 都能直接读写 |
 | 内核独立 | `od-core` 不依赖任何编辑器 SDK |
+| Agent 即界面 | 交互发生在编码 Agent 里，经 MCP 驱动内核 |
 | 预览统一 | 一种 WebView 实现，多种产物类型 |
 | 技能即目录 | `SKILL.md` + 可选模板，无注册表 |
 | 设计内核极轻 | `--od-*` token + recipe，不绑定 UI 框架 |
@@ -23,9 +24,11 @@
 ## 系统分层
 
 ```text
-┌──────────────────────────────────────────────────────────┐
+              编码 Agent（外部，经 MCP 连接）
+                             │
+┌────────────────────────────v─────────────────────────────┐
 │  Surfaces（入口层）                                       │
-│  apps/shell   od-cli   od-mcp   apps/extensions          │
+│  od-mcp（主入口）      od-cli（脚本化辅助）              │
 └────────────────────────────┬─────────────────────────────┘
                              │ 调用
 ┌────────────────────────────v─────────────────────────────┐
@@ -48,36 +51,17 @@
 | Crate | 职责 | 状态 |
 |-------|------|------|
 | `od-core` | 产物类型、工作区路径、manifest 路径、领域原语 | 脚手架 |
-| `od-cli` | `odl` 子命令：`init` `new` `preview` `export` `handoff` | 部分实现 |
+| `od-mcp` | MCP tool 注册与调用转发到内核（主入口） | 占位 |
+| `od-cli` | `odl` 子命令：`init` `new` `preview` `export` `handoff`（脚本化辅助） | 部分实现 |
 | `od-preview` | WebView 预览、文件监视、Markdown 渲染边界 | 占位 |
-| `od-mcp` | MCP tool 注册与调用转发到内核 | 占位 |
-| `apps/shell` | 原生窗口 UI（可选，与 `od-preview` 合并或拆分待定） | 占位 |
 
-**依赖方向**：`od-cli` / `od-mcp` / `apps/shell` → `od-core` → 标准库 + 最小第三方依赖。`od-preview` 可被 CLI 与 shell 共用。
+**依赖方向**：`od-mcp` / `od-cli` → `od-core` → 标准库 + 最小第三方依赖。`od-preview` 被 MCP 与 CLI 共用，由 `artifact_preview` / `odl preview` 拉起。
 
 ## Design Kernel
 
-Design kernel 是内核中的设计语言层，不是组件库。
+Design kernel 是内核中的设计语言层（token + layout primitive + component recipe + pattern + visual brief），不是组件库，也不内置任何 UI runtime。它随 artifact 写出静态 CSS 与设计说明，让 HTML / Slides 默认更好看，同时保持产物可离线打开。
 
-```text
-design kernel
-  tokens       # primitive + semantic CSS variables / JSON tokens
-  primitives   # Stack / Inline / Grid / Container / Section / Split
-  recipes      # Button / Input / Card / Tabs / Table / EmptyState
-  patterns     # artifact workspace / dashboard / landing / settings
-```
-
-### 设计内核边界
-
-| 层 | 可以进入 core | 不进入 core |
-|----|---------------|-------------|
-| Token | `--od-*` CSS variables、JSON token schema | 绑定某个 UI kit 的 token API |
-| Layout | Stack、Inline、Grid、Container 等语义 | React/Vue/Svelte layout 组件 |
-| Recipe | 框架无关的 button、card、form、table 样式约定 | Radix/shadcn/Headless UI 组件实现 |
-| Pattern | visual brief、artifact workspace、dashboard 等生成约束 | 固定页面模板库或 SaaS 套壳 |
-| Adapter | Tailwind、shadcn/ui、Web Components 输出目标 | adapter 依赖反向进入 core |
-
-第一版目标是随 artifact 写出静态 CSS 与设计说明，让 HTML / Slides 默认更好看，同时保持产物可离线打开。实现级字段后续在 specs 中定义。
+四层结构、class 命名、边界规则与 visual brief 的**唯一详细来源**是 [specs/design-kernel.md](../specs/design-kernel.md)（镜像 `crates/od-core/src/design/catalog.rs`），此处不再重复展开。决策背景见 [ADR 0002](../decisions/0002-lightweight-design-kernel.md)。
 
 ## 产物模型（Artifact）
 
@@ -156,11 +140,11 @@ odl preview <dir>
 
 | 层级 | 机制 | 适用场景 |
 |------|------|----------|
-| L1 文件 | `handoff.md` + 产物目录 | 任意 Agent，零集成 |
-| L2 CLI | `odl new` `preview` `export` `handoff` | 脚本、编辑器命令 |
-| L3 MCP | tool: create / preview / export / handoff | Cursor、Codex 等 MCP 客户端 |
+| **L3 MCP（主路径）** | tool: create / preview / export / handoff | opencode、Codex、Claude Code、Cursor 等 MCP 客户端 |
+| L2 CLI（脚本化辅助） | `odl new` `preview` `export` `handoff` | 脚本、自动化、无 MCP 场景 |
+| L1 文件（兜底） | `handoff.md` + 产物目录 | 任意 Agent，零集成 |
 
-v1 可先完成 L1+L2；L3 在 M2。内置模型调用（L4）在 M3，非 MVP 阻塞项。
+MCP 是产品的主交付（M2）。M1 先跑通本地产物+预览闭环（L1+L2 的基础），MCP 在其上暴露同一套能力。内置模型调用在 M3，非 MVP 阻塞项。
 
 ## CLI 命令（目标契约）
 
@@ -187,19 +171,19 @@ v1 可先完成 L1+L2；L3 在 M2。内置模型调用（L4）在 M3，非 MVP �
 
 详情：[specs/mcp.md](../specs/README.md#mcp)。
 
-## 为何不用插件优先
+## 为何用 MCP 优先，而非壳层或插件优先
 
-- Cursor / VS Code / Zed / Codex 扩展 API 各不相同
-- 预览面板行为不一致
-- 核心产品会被第一个插件绑架
+- 用户已经在用带 MCP 能力的编码 Agent，Agent 本身就是交互界面——无需自研并维护一套对话/预览 UI。
+- 编辑器插件 API（Cursor / VS Code / Zed / Codex）各不相同，预览面板行为不一致，核心产品会被第一个插件绑架。
+- MCP 是跨 Agent 的稳定契约：配置一次即用，产物存储与预览行为一致。
 
-插件只做：打开预览、发送选区到 `odl`、调 MCP、显示状态。**不持有**产物存储与模型配置。
+预览只是一个由 `artifact_preview` 拉起的常驻窗口，不获得 MCP/shell/文件系统 IPC。
 
 ## 技术选型（开放）
 
 | 项 | 候选 | 决定时机 |
 |----|------|----------|
-| 原生壳层 | Tauri、Wry、其他 Rust WebView | M1 preview spike |
+| 预览 WebView | Wry + Tao（M1 已采用），其他 Rust WebView 备选 | M1 preview spike |
 | Markdown 渲染 | 内置 crate vs 转 HTML | M1 |
 | 模型调用 | v1 仅编排外部 Agent vs 内置 BYOK | M3 前 ADR |
 

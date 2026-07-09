@@ -1,12 +1,25 @@
 # Open Design Lite
 
-Local-first design assistant (`odl`): HTML pages, Markdown docs, and lightweight HTML slides — create, preview, and hand off to coding agents.
+Local-first design assistant (`odl`) that plugs into your coding agent over **MCP**. Describe what you want in one sentence; the agent calls Open Design Lite's tools to create HTML pages, Markdown docs, or lightweight HTML slides, and a live preview window pops open and refreshes as the agent iterates.
 
 Design defaults stay lightweight and framework-agnostic: CSS variables, static recipes, and plain files instead of a bundled UI runtime.
 
 **Docs**: [docs/README.md](docs/README.md) (中文)
 
-## Quick Start
+## How it works
+
+1. Configure the `open-design-lite` MCP server once in your agent (opencode / Codex / Claude Code / Cursor / Zed…).
+2. Tell the agent what you want.
+3. The agent calls the MCP tools (`artifact_create`, `artifact_preview`, …) to build the artifact and auto-open a preview.
+4. Keep chatting with the agent to tweak; the persistent preview window live-reloads on every change.
+
+No separate app, no chat/preview shell to install — the agent is your UI, the preview is just a window.
+
+> MCP transport is stdio and lands in **M2** (`crates/od-mcp`, currently scaffolded). See [docs/product/roadmap.md](docs/product/roadmap.md).
+
+## Quick Start (scripting)
+
+The `odl` CLI is a scripting convenience over the same kernel:
 
 ```powershell
 cargo run -p od-cli -- init .odl-demo
@@ -14,17 +27,14 @@ cargo run -p od-cli -- new html .odl-demo/hello
 cargo run -p od-cli -- preview .odl-demo/hello
 ```
 
-Scaffold only; see [docs/product/roadmap.md](docs/product/roadmap.md) for milestones.
-
 ## Repository
 
 ```text
 crates/od-core    od-cli    od-mcp    od-preview
-apps/shell        extensions/
 skills/           templates/
 docs/             ← start here
 ```
 
 ## Direction
 
-Binary shell first, thin editor plugins later. CLI and MCP are the stable integration surface. The design system belongs in core as tokens and recipes, not as React/Tailwind/shadcn runtime.
+MCP-first: agents drive design via MCP, and the preview auto-launches and live-reloads. The CLI is a scripting convenience over the same kernel. The design system lives in core as tokens and recipes, not as a React/Tailwind/shadcn runtime.

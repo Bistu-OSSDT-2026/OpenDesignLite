@@ -1,6 +1,6 @@
 # 模块边界
 
-防止壳层、CLI、MCP、插件各自长出一套逻辑。
+防止 MCP、CLI、preview 各自长出一套逻辑。
 
 ## 归属表
 
@@ -8,13 +8,11 @@
 |------|--------|------------|
 | 产物路径、类型、manifest 解析 | `od-core` | CLI/MCP 重复实现 |
 | Design token、layout primitive、recipe 语义 | `od-core` | templates/skills 各自发明 |
-| 文件监视与 WebView 生命周期 | `od-preview` | `od-cli` 内嵌 UI |
+| 文件监视与 WebView 生命周期 | `od-preview` | `od-cli` / `od-mcp` 内嵌 UI |
 | 子命令解析与用户输出 | `od-cli` | `od-mcp` |
 | MCP JSON-RPC 与 tool schema | `od-mcp` | `od-cli` |
-| 窗口 chrome、菜单（若有） | `apps/shell` | `od-core` |
 | 技能文案与模板 | `skills/` + `templates/` | 硬编码在 Rust |
-| 具体前端框架 adapter | `apps/extensions/` 或后续 adapters | `od-core` 直接依赖 |
-| 编辑器快捷键、面板 | `apps/extensions/` | 内核 |
+| 具体前端框架 adapter | 后续 adapters（导出目标） | `od-core` 直接依赖 |
 
 ## 集成契约（变更需同步）
 
@@ -31,14 +29,13 @@
 ## 数据流：创建到预览
 
 ```text
-User / Agent
-    → od-cli | od-mcp | shell UI
-        → od-core::Artifact::new
-            → fs: 写主文件 + handoff.md
+编码 Agent（MCP） | od-cli
+    → od-core::Artifact::new
+        → fs: 写主文件 + handoff.md
     → od-preview::open(artifact.root)
         → 解析主文件路径
-        → WebView load
-        → watcher → reload
+        → WebView load（自动弹出常驻窗口）
+        → watcher → reload（Agent 后续改文件即刷新）
 ```
 
 ## 数据流：交接
@@ -52,10 +49,10 @@ User 将目录或 handoff 交给外部 Agent
 
 ## 反模式
 
-- 在插件里存 artifact 路径数据库
+- 在 MCP/CLI 层另存一套 artifact 路径数据库（真相在磁盘）
 - 为预览启动 `npm run dev`
-- 每个编辑器实现一套 export
-- 在内核引用 Cursor/Zed SDK
+- 自研独立的对话/预览壳层 app（Agent 即界面）
+- 在内核引用任何编辑器/Agent SDK
 - 未 ADR 引入重型前端框架
 - 在 `od-core` 直接依赖 React、Tailwind、Radix、shadcn/ui、Lit 或 Web Components runtime
 - 每个 template 自己定义一套不兼容的颜色、间距、圆角、阴影命名

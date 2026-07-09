@@ -6,7 +6,7 @@ This repository is for a lightweight, local-first design assistant. Keep changes
 
 - Prefer a local binary and static assets over a web server.
 - Keep the kernel independent from any one editor or coding agent.
-- Treat plugins as thin adapters over CLI/MCP, not as the core product.
+- MCP and the CLI are the integration contract; agents drive the kernel through them.
 - Store artifacts as plain files on disk.
 - Optimize first-run and time-to-preview over ecosystem breadth.
 
@@ -20,4 +20,4 @@ This repository is for a lightweight, local-first design assistant. Keep changes
 
 ## Current Decision
 
-The primary product surface is a native binary shell (`odl`) with a local preview. MCP and editor extensions are secondary surfaces that drive the same kernel.
+The primary product surface is the **MCP tool surface**: coding agents drive `od-core` over MCP, and `artifact_preview` auto-launches a persistent, live-reloading preview window. The `odl` CLI is a scripting convenience over the same kernel. There is no separate chat/preview shell app.

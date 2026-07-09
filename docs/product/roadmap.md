@@ -15,22 +15,25 @@
 ## M1：本地产物闭环
 
 - `odl init` / `odl new html|docs|slides`
-- 原生预览壳层打开产物目录
+- 原生预览窗口打开产物目录
 - 文件监视 → 自动刷新预览
 - `handoff.md` 生成规范落地
 - HTML / Slides starter 使用轻量 design token 与静态 CSS recipe
 
-**出口**：创建 HTML artifact → 本地窗口预览 → 改文件即刷新 → 有 handoff。
+**出口**：创建 HTML artifact → 本地窗口预览 → 改文件即刷新 → 有 handoff。这是 MCP（M2）的前置基础。
 
 依赖 spec：[artifact-workspace](../specs/README.md)、[preview](../specs/README.md)、[handoff](../specs/README.md)
 
-## M2：Agent 桥接
+## M2：Agent 桥接（MCP，产品主交付）
 
-- MCP 暴露 create / preview / export / handoff
-- 面向 Codex、Claude Code、OpenCode、Cursor、Zed 的交接模板
-- 可选：外部命令运行器
+这是产品的核心里程碑：把 M1 的本地产物+预览闭环通过 MCP 暴露给编码 Agent。
 
-**出口**：外部 Agent 通过 MCP 或 handoff 文件完成一轮迭代。
+- MCP（stdio）暴露 create / preview / export / handoff
+- `artifact_create` 生成产物；`artifact_preview` 自动弹出常驻预览窗口
+- Agent 迭代改文件 → 预览窗口实时刷新（复用 M1 文件监视）
+- 面向 opencode、Codex、Claude Code、Cursor、Zed 的交接模板与配置说明
+
+**出口**：在 Agent 里配好 MCP → 一句话生成产物 → 预览自动弹出 → 继续对话微调 → 预览实时刷新。
 
 依赖 spec：[mcp](../specs/README.md)、[cli](../specs/README.md)
 
@@ -55,12 +58,3 @@
 **出口**：`odl export` 覆盖常用格式。
 
 依赖 spec：[export](../specs/README.md)
-
-## M5：薄插件
-
-- Cursor / Zed / VS Code 命令集成（择一先做）
-- Codex / Claude Code MCP 安装助手
-
-**出口**：从编辑器一条命令打开预览或发送 handoff。
-
-依赖：`apps/extensions/adapter-plan.md`（待写）

@@ -14,6 +14,8 @@
 - **`odl new` 接入力度**：M1 保留 fallback，skill 找不到或模板缺失时退回现有 `include_str!` starter；后续稳定后可改为 skill 缺失即报错。
 - **front matter 解析器**：M1 手写 line-based，不引入 `serde_yaml`（遵循 AGENTS.md）。
 
+> **现状与待迁移（模板去重）**：目前顶层 `templates/html-page/basic.html`、`templates/slides/basic.html` 仍是 `crates/od-cli/src/commands/new.rs` 的 `include_str!` starter 源（也被 `od-preview` example 引用），与 skill 内 `templates/basic.*` **重复**。把模板完全收进 skill 目录、顶层只留公共片段，需要先改 `new.rs` 的 fallback 读取方式——属代码迁移，尚未完成，不要在文档整理时直接删顶层模板。
+
 ## 技能目录
 
 每个 skill 自包含：`SKILL.md` + 该 skill 专属模板。模板收进 skill 目录，而不是顶层 `templates/`，使新增 skill = 新增一个目录，零 Rust 改动。顶层 `templates/` 仅保留公共片段（如 `od-design.css` starter）。
@@ -76,7 +78,7 @@ M1 解析只要求前三个字段。额外字段必须忽略而不是报错。
 
 ## Rust 模型
 
-实现位置：`crates/od-core/src/skill.rs`。技能 front matter 解析是内核能力，CLI / MCP / shell 必须复用，不得各自推断（见 [boundaries.md](../architecture/boundaries.md)）。
+实现位置：`crates/od-core/src/skill.rs`。技能 front matter 解析是内核能力，CLI / MCP 必须复用，不得各自推断（见 [boundaries.md](../architecture/boundaries.md)）。
 
 ### 两层类型
 

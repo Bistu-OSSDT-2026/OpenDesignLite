@@ -1,6 +1,6 @@
 # Open Design Lite 文档
 
-命令名 `odl`。轻量、本地优先的设计/内容辅助工具。
+通过 MCP 接入编码 Agent 的轻量、本地优先设计助手。Agent 一句话驱动，预览自动弹出并实时刷新；命令名 `odl` 的 CLI 是脚本化辅助。
 
 ## 阅读顺序
 
@@ -18,13 +18,10 @@
 ## 仓库地图
 
 ```text
-apps/
-  shell/          原生预览壳层（占位）
-  extensions/     编辑器薄适配层（占位）
 crates/
   od-core/        产物、工作区、技能、运行原语
-  od-cli/         `odl` 命令入口
-  od-mcp/         MCP 工具面（占位）
+  od-mcp/         MCP 工具面（主入口，占位）
+  od-cli/         `odl` 命令入口（脚本化辅助）
   od-preview/     预览/导出边界（占位）
 docs/             本文档树
 skills/           内置技能（SKILL.md）
@@ -33,9 +30,10 @@ templates/        启动模板
 
 ## 当前状态
 
+- **定位已定**：MCP 优先 / Agent 驱动，无独立壳层 app（见 [ADR 0001](decisions/0001-binary-shell-first.md)）
 - **M0 进行中**：文档契约 + Rust 脚手架 + 最小 CLI（`init` / `new` / `preview` 占位）
 - **Design kernel 路线已定**：极轻、框架无关，使用 CSS variables + recipe，不内置 UI runtime
-- **下一优先级**：补齐 [specs/](specs/) 中的 artifact-workspace 与 preview 规范，再推进 M1
+- **下一优先级**：M1 本地产物+预览闭环，再推进 M2 的 MCP 桥接（产品主交付）
 
 ## 文档语言
 
