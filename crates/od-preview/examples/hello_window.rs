@@ -42,9 +42,7 @@ fn main() -> wry::Result<()> {
 
     // Windows 上 WebViewBuilder::build 接收 &window。
     // _webview 必须保活到事件循环结束，否则窗口立刻关闭。
-    let _webview = WebViewBuilder::new()
-        .with_url(&url)
-        .build(&window)?;
+    let _webview = WebViewBuilder::new().with_url(&url).build(&window)?;
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;

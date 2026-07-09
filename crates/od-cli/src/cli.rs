@@ -75,6 +75,24 @@ pub enum Command {
         #[arg(long)]
         out: Option<PathBuf>,
     },
-    /// 列出可用 skill。
-    Skill,
+    /// 列出可用 skill，或显示某个 skill 的正文。
+    Skill {
+        #[command(subcommand)]
+        action: Option<SkillAction>,
+        /// 列表模式输出 JSON 数组。也可使用全局 `--json`。
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SkillAction {
+    /// 输出某个 skill 的 SKILL.md 正文（front matter 之后）。
+    Show {
+        /// skill name（kebab-case）。
+        name: String,
+        /// 输出 JSON 对象。也可使用全局 `--json`。
+        #[arg(long)]
+        json: bool,
+    },
 }

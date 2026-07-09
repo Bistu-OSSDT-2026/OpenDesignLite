@@ -45,7 +45,9 @@ mod tests {
         assert!(references_stylesheet(
             "<link rel=\"stylesheet\" href=\"assets/od-design.css\" />"
         ));
-        assert!(references_stylesheet("<style data-od-design>/* … */</style>"));
+        assert!(references_stylesheet(
+            "<style data-od-design>/* … */</style>"
+        ));
         assert!(!references_stylesheet("<style>body{}</style>"));
     }
 

@@ -3,7 +3,7 @@
 //! Spec: docs/specs/cli.md, artifact-workspace.md, handoff.md, built-in-skills.md
 
 use crate::commands::skill::{builtin_skills_dir, workspace_skills_dir};
-use od_core::design::{VisualBrief, KERNEL_VERSION, STYLESHEET_ASSET};
+use od_core::design::{css_for, guardrails, VisualBrief, KERNEL_VERSION, STYLESHEET_ASSET};
 use od_core::manifest::{ArtifactManifest, DesignMeta, SCHEMA_VERSION};
 use od_core::{handoff, skill, Artifact, ArtifactKind, OdError, Result};
 use std::fs;
@@ -41,14 +41,16 @@ pub fn run(kind_slug: &str, root: &Path, options: NewOptions<'_>) -> Result<NewR
         fs::create_dir_all(artifact.assets_dir())?;
         fs::write(
             artifact.assets_dir().join("od-design.css"),
-            design_css(visual_brief),
+            css_for(visual_brief),
         )?;
         Some(STYLESHEET_ASSET.to_string())
     };
 
     let mut primary_content = template;
     if options.embed_css {
-        primary_content = embed_design_css(&primary_content, design_css(visual_brief));
+        primary_content = embed_design_css(&primary_content, &css_for(visual_brief));
+    } else {
+        primary_content = link_design_css(&primary_content);
     }
 
     fs::write(&primary, primary_content)?;
@@ -138,21 +140,30 @@ fn starter_content(kind: ArtifactKind) -> &'static str {
     }
 }
 
-fn design_css(brief: VisualBrief) -> &'static str {
-    match brief {
-        VisualBrief::Editorial => EDITORIAL_CSS,
-        VisualBrief::Studio => STUDIO_CSS,
-        VisualBrief::Workbench => WORKBENCH_CSS,
-    }
-}
-
 fn embed_design_css(content: &str, css: &str) -> String {
     if !content.contains("</head>") {
         return content.to_string();
     }
+    let content = content.replace(
+        &format!("  <link rel=\"stylesheet\" href=\"{STYLESHEET_ASSET}\" />\n"),
+        "",
+    );
     content.replace(
         "</head>",
-        &format!("  <style data-od-design>\n{css}\n  </style>\n  </head>"),
+        &format!(
+            "  <style {}>\n{css}\n  </style>\n  </head>",
+            guardrails::INLINE_STYLE_MARKER
+        ),
+    )
+}
+
+fn link_design_css(content: &str) -> String {
+    if guardrails::references_stylesheet(content) || !content.contains("</head>") {
+        return content.to_string();
+    }
+    content.replace(
+        "</head>",
+        &format!("  <link rel=\"stylesheet\" href=\"{STYLESHEET_ASSET}\" />\n  </head>"),
     )
 }
 
@@ -163,45 +174,3 @@ fn created_at() -> String {
         .as_secs();
     format!("{secs}")
 }
-
-const EDITORIAL_CSS: &str = r#":root {
-  --od-bg-canvas: #f7f3ed;
-  --od-bg-surface: #fffaf3;
-  --od-text-primary: #171412;
-  --od-text-secondary: #5f5750;
-  --od-accent-solid: #8f5b3f;
-  --od-space-6: 1.5rem;
-  --od-radius-lg: 1rem;
-  --od-font-sans: Arial, sans-serif;
-}
-body { background: var(--od-bg-canvas); color: var(--od-text-primary); font-family: var(--od-font-sans); }
-a { color: var(--od-accent-solid); }
-"#;
-
-const STUDIO_CSS: &str = r#":root {
-  --od-bg-canvas: #111318;
-  --od-bg-surface: #1b1f29;
-  --od-text-primary: #f4f0e8;
-  --od-text-secondary: #bbb4a8;
-  --od-accent-solid: #d8a24a;
-  --od-space-6: 1.5rem;
-  --od-radius-lg: 1rem;
-  --od-font-sans: Arial, sans-serif;
-}
-body { background: var(--od-bg-canvas); color: var(--od-text-primary); font-family: var(--od-font-sans); }
-a { color: var(--od-accent-solid); }
-"#;
-
-const WORKBENCH_CSS: &str = r#":root {
-  --od-bg-canvas: #f4f7f8;
-  --od-bg-surface: #ffffff;
-  --od-text-primary: #142026;
-  --od-text-secondary: #52616b;
-  --od-accent-solid: #1b6f8f;
-  --od-space-6: 1.5rem;
-  --od-radius-lg: 1rem;
-  --od-font-sans: Arial, sans-serif;
-}
-body { background: var(--od-bg-canvas); color: var(--od-text-primary); font-family: var(--od-font-sans); }
-a { color: var(--od-accent-solid); }
-"#;

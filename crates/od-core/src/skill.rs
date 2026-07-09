@@ -1,4 +1,4 @@
-//! 内置技能模型：`SKILL.md` front matter。技能是文件系统目录，不是硬编码逻辑。
+//! 内置技能模型：`SKILL.md` front matter 与正文。技能是文件系统目录，不是硬编码逻辑。
 //!
 //! Spec: docs/specs/built-in-skills.md
 
@@ -18,6 +18,8 @@ pub struct SkillFrontMatter {
     pub description: String,
     pub template: Option<String>,
     pub visual_brief: Option<String>,
+    /// front matter 结束后的正文，供 `odl skill show` 输出给 agent 阅读。
+    pub body: String,
 }
 
 impl SkillFrontMatter {
@@ -45,7 +47,8 @@ impl SkillFrontMatter {
         let mut visual_brief = None;
         let mut closed = false;
 
-        for line in lines {
+        let mut body_lines = Vec::new();
+        for line in lines.by_ref() {
             if line.trim() == "---" {
                 closed = true;
                 break;
@@ -69,12 +72,15 @@ impl SkillFrontMatter {
             return Err(invalid("missing closing front matter delimiter"));
         }
 
+        body_lines.extend(lines);
+
         Ok(Self {
             name: required(name, "name")?,
             mode: required(mode, "mode")?,
             description: required(description, "description")?,
             template,
             visual_brief,
+            body: body_lines.join("\n").trim().to_string(),
         })
     }
 }
@@ -108,6 +114,10 @@ impl Skill {
 
     pub fn name(&self) -> &str {
         &self.front.name
+    }
+
+    pub fn body(&self) -> &str {
+        &self.front.body
     }
 }
 
@@ -189,6 +199,17 @@ mod tests {
         assert_eq!(front.kind(), Some(ArtifactKind::Html));
         assert_eq!(front.template.as_deref(), Some("templates/basic.html"));
         assert_eq!(front.visual_brief.as_deref(), Some("studio"));
+        assert_eq!(front.body, "Body");
+    }
+
+    #[test]
+    fn body_is_empty_when_front_matter_has_no_prose() {
+        let front = SkillFrontMatter::parse(
+            "---\nname: html-page\nmode: html\ndescription: Create HTML.\n---\n",
+        )
+        .unwrap();
+
+        assert_eq!(front.body, "");
     }
 
     #[test]

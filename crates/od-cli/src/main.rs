@@ -9,7 +9,7 @@ mod exit;
 mod output;
 
 use clap::Parser;
-use cli::{Cli, Command};
+use cli::{Cli, Command, SkillAction};
 use error::Result;
 use output::Reporter;
 use serde_json::json;
@@ -85,23 +85,47 @@ fn dispatch(command: &Command, reporter: &Reporter) -> Result<()> {
         Command::Export { dir, format, .. } => {
             commands::export::run(dir, format)?;
         }
-        Command::Skill => {
+        Command::Skill { action, json } => {
             let cwd = std::env::current_dir()?;
-            let skills = commands::skill::list(&cwd);
-            reporter.json_value(json!(skills
-                .iter()
-                .map(|skill| json!({
-                    "name": skill.front.name,
-                    "mode": skill.front.mode,
-                    "description": skill.front.description,
-                }))
-                .collect::<Vec<_>>()));
-            if !reporter.json {
-                for skill in skills {
-                    reporter.info(&format!(
-                        "{} | {} | {}",
-                        skill.front.name, skill.front.mode, skill.front.description
-                    ));
+            let skill_json = commands::skill::wants_json(reporter.json, *json, action.as_ref());
+            match action {
+                None => {
+                    let skills = commands::skill::list(&cwd);
+                    let payload = json!(skills
+                        .iter()
+                        .map(|skill| json!({
+                            "name": skill.front.name,
+                            "mode": skill.front.mode,
+                            "description": skill.front.description,
+                        }))
+                        .collect::<Vec<_>>());
+                    if skill_json {
+                        println!("{payload}");
+                    } else {
+                        for skill in skills {
+                            reporter.info(&format!(
+                                "{} | {} | {}",
+                                skill.front.name, skill.front.mode, skill.front.description
+                            ));
+                        }
+                    }
+                }
+                Some(SkillAction::Show { name, .. }) => {
+                    let skill = commands::skill::show(&cwd, name)?;
+                    if skill_json {
+                        println!(
+                            "{}",
+                            json!({
+                                "name": skill.name(),
+                                "mode": skill.front.mode,
+                                "description": skill.front.description,
+                                "body": skill.body(),
+                                "root": skill.root,
+                            })
+                        );
+                    } else {
+                        println!("{}", skill.body());
+                    }
                 }
             }
         }

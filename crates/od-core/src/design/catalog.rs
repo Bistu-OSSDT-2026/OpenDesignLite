@@ -91,7 +91,10 @@ mod tests {
             assert!(is_od_class(class), "{class} must carry od- prefix");
             assert!(seen.insert(class), "duplicate class: {class}");
         }
-        assert_eq!(seen.len(), PRIMITIVES.len() + RECIPES.len() + PATTERNS.len());
+        assert_eq!(
+            seen.len(),
+            PRIMITIVES.len() + RECIPES.len() + PATTERNS.len()
+        );
     }
 
     #[test]

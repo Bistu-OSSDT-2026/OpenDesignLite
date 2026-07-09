@@ -1,12 +1,54 @@
 ---
 name: slides-html
 mode: slides
-description: Create lightweight browser-previewable slides as a single HTML file.
+description: Create lightweight browser-previewable slides as a single HTML file. Use whenever the user asks for a slide deck, presentation slides, talk slides, pitch deck, or "slides for X" — even if they just say "make slides".
+template: templates/basic.html
+visualBrief: studio
 ---
 
-Create a compact HTML slide deck that previews instantly. Prioritize readable layouts, keyboard navigation, and export-friendly dimensions.
+# slides-html
 
-Expected output:
+You produce a compact HTML slide deck that previews instantly in a browser and exports cleanly. One idea per slide. No build tools, no framework, no server — the file is the deck.
 
-- `slides.html`
-- optional `handoff.md` with speaker intent and follow-up ideas
+## Visual brief
+
+**定调**：画廊墙 / 设计评图板——每一页是单个想法的安静舞台，留白本身就是设计，不是空隙。
+
+具体可执行的视觉约束见 [`visual-briefs.md`](../visual-briefs.md) 的 `studio` 小节。
+
+## Expected output
+
+```
+slides.html
+assets/od-design.css
+manifest.json
+handoff.md
+```
+
+## Deck structure
+
+- Slide 1: title, one-line subtitle, optional speaker/date.
+- Body slides: one self-contained point per slide.
+- Section dividers: sparse title plus number or one-line preview.
+- Final slide: takeaways, contact, or question prompt.
+
+## How to build
+
+1. Start from `templates/basic.html`; keep `.od-slide-deck`, `.od-slide`, and `.od-slide__inner`.
+2. Add minimal keyboard navigation when useful.
+3. Use pure-CSS placeholders instead of remote images.
+4. Wire styling through `--od-*` tokens and `.od-*` classes.
+
+## Constraints
+
+- Keep JSX/TSX, Tailwind, shadcn/ui, and CDN UI kits out.
+- Do not start a dev server.
+- Do not let a slide overflow; split or cut instead.
+- Keep transitions static by default.
+
+## Self-check
+
+- [ ] Every slide fits inside its 16:9 frame.
+- [ ] Keyboard navigation works if included.
+- [ ] No remote font, image, or script dependency.
+- [ ] `handoff.md` captures speaker intent and cut material.

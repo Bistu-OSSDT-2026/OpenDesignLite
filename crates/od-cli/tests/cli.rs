@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use od_core::design::guardrails;
 use predicates::prelude::*;
 use serde_json::Value;
 
@@ -43,15 +44,18 @@ fn new_html_creates_artifact_files() {
     odl()
         .args(["new", "html", root.to_str().unwrap(), "--title", "Demo"])
         .assert()
-        .success()
-        .stderr(predicate::str::contains(
-            "warning: skill `html-page` has no usable template",
-        ));
+        .success();
 
     assert!(root.join("index.html").exists());
     assert!(root.join("manifest.json").exists());
     assert!(root.join("handoff.md").exists());
     assert!(root.join("assets").join("od-design.css").exists());
+
+    let primary = std::fs::read_to_string(root.join("index.html")).unwrap();
+    let css = std::fs::read_to_string(root.join("assets").join("od-design.css")).unwrap();
+    assert!(guardrails::references_stylesheet(&primary));
+    assert!(guardrails::uses_design_language(&primary));
+    assert!(guardrails::uses_design_language(&css));
 
     let manifest: Value =
         serde_json::from_str(&std::fs::read_to_string(root.join("manifest.json")).unwrap())
@@ -59,6 +63,23 @@ fn new_html_creates_artifact_files() {
     assert_eq!(manifest["kind"], "html");
     assert_eq!(manifest["title"], "Demo");
     assert_eq!(manifest["primaryFile"], "index.html");
+}
+
+#[test]
+fn new_html_embed_css_uses_inline_design_marker_only() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("artifact");
+
+    odl()
+        .args(["new", "html", root.to_str().unwrap(), "--embed-css"])
+        .assert()
+        .success();
+
+    let primary = std::fs::read_to_string(root.join("index.html")).unwrap();
+    assert!(guardrails::references_stylesheet(&primary));
+    assert!(guardrails::uses_design_language(&primary));
+    assert!(!root.join("assets").join("od-design.css").exists());
+    assert!(!primary.contains("href=\"assets/od-design.css\""));
 }
 
 #[test]
@@ -105,4 +126,45 @@ fn skill_lists_builtin_skills_and_json_is_parseable() {
     let value: Value = serde_json::from_slice(&output).unwrap();
 
     assert_eq!(value.as_array().unwrap().len(), 3);
+
+    let output = odl()
+        .args(["skill", "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let value: Value = serde_json::from_slice(&output).unwrap();
+    assert_eq!(value.as_array().unwrap().len(), 3);
+}
+
+#[test]
+fn skill_show_outputs_body_and_json() {
+    odl()
+        .args(["skill", "show", "html-page"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Expected output"));
+
+    let output = odl()
+        .args(["skill", "show", "slides-html", "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let value: Value = serde_json::from_slice(&output).unwrap();
+    assert_eq!(value["name"], "slides-html");
+    assert_eq!(value["mode"], "slides");
+    assert!(value["body"].as_str().unwrap().contains("Expected output"));
+}
+
+#[test]
+fn skill_show_unknown_is_usage_error() {
+    odl()
+        .args(["skill", "show", "nope"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("skill_not_found"))
+        .stderr(predicate::str::contains("nope"));
 }

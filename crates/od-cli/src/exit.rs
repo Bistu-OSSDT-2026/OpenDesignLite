@@ -27,7 +27,7 @@ pub fn code_for(err: &CliError) -> i32 {
 
 fn code_for_core(err: &OdError) -> i32 {
     match err {
-        OdError::ArtifactKindUnknown(_) => USAGE,
+        OdError::ArtifactKindUnknown(_) | OdError::SkillNotFound(_) => USAGE,
         OdError::WorkspaceNotFound(_)
         | OdError::PrimaryFileMissing(_)
         | OdError::ManifestInvalid { .. }
@@ -41,9 +41,7 @@ fn code_for_core(err: &OdError) -> i32 {
 
 fn code_for_preview(err: &PreviewError) -> i32 {
     match err {
-        PreviewError::ArtifactNotFound(_) | PreviewError::PrimaryFileMissing(_) => {
-            INVALID_ARTIFACT
-        }
+        PreviewError::ArtifactNotFound(_) | PreviewError::PrimaryFileMissing(_) => INVALID_ARTIFACT,
         PreviewError::RenderFailed(_)
         | PreviewError::WebviewFailed(_)
         | PreviewError::WatchFailed(_)

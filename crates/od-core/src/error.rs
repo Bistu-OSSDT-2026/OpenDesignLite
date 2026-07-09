@@ -28,6 +28,9 @@ pub enum OdError {
     #[error("skill front matter is invalid: {0}")]
     SkillFrontMatterInvalid(String),
 
+    #[error("skill not found: {0}")]
+    SkillNotFound(String),
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -46,6 +49,7 @@ impl OdError {
             Self::AlreadyExists(_) => "already_exists",
             Self::PathEscape(_) => "path_escape",
             Self::SkillFrontMatterInvalid(_) => "skill_front_matter_invalid",
+            Self::SkillNotFound(_) => "skill_not_found",
             Self::Io(_) => "io_error",
             Self::NotImplemented(_) => "not_implemented",
         }
