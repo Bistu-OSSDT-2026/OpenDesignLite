@@ -10,6 +10,7 @@ pub mod render;
 pub mod watch;
 pub mod webview;
 
+use od_core::design::VisualBrief;
 use od_core::ArtifactKind;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
@@ -153,7 +154,8 @@ fn preview_file_for(
 }
 
 fn write_markdown_preview(root: &Path, primary: &Path) -> Result<PathBuf, PreviewError> {
-    let html = render::markdown::render_markdown(primary)?;
+    let brief = VisualBrief::default_for(ArtifactKind::Markdown);
+    let html = render::markdown::render_markdown(primary, brief)?;
     let tmp = root.join(".odl").join("preview.html");
     std::fs::create_dir_all(tmp.parent().expect("tmp has parent"))
         .map_err(|e| PreviewError::RenderFailed(format!("create tmp dir: {e}")))?;
