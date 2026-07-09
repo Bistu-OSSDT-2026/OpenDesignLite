@@ -2038,6 +2038,7 @@ name = "od-mcp"
 version = "0.1.0"
 dependencies = [
  "od-core",
+ "serde_json",
  "thiserror 1.0.69",
 ]
 

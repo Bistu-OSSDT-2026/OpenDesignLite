@@ -29,3 +29,11 @@ impl McpError {
         }
     }
 }
+
+/// 与 `tools::create::from_core_err` 里 `OdError::Io` 同口径：
+/// mcp.md 错误码表尚缺 `io_error`，暂归 `invalid_args`，待 spec 补齐。
+impl From<std::io::Error> for McpError {
+    fn from(err: std::io::Error) -> Self {
+        Self::InvalidArgs(format!("io error: {err}"))
+    }
+}
