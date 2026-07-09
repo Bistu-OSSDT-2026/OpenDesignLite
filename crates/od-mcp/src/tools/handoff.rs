@@ -75,9 +75,7 @@ fn artifact_from_root(root: &Path) -> Result<Artifact, OdError> {
 /// 其余待 spec 补齐。
 fn from_core_err(err: OdError) -> McpError {
     match err {
-        OdError::PrimaryFileMissing(p) => {
-            McpError::ArtifactNotFound(format!("{}", p.display()))
-        }
+        OdError::PrimaryFileMissing(p) => McpError::ArtifactNotFound(format!("{}", p.display())),
         OdError::Io(e) => McpError::InvalidArgs(format!("io error: {e}")),
         other => McpError::InvalidArgs(other.to_string()),
     }
@@ -156,7 +154,10 @@ mod tests {
             write: false,
         })
         .unwrap();
-        assert_eq!(result.content, existing, "read must return existing file verbatim");
+        assert_eq!(
+            result.content, existing,
+            "read must return existing file verbatim"
+        );
         // 没被改写
         assert_eq!(std::fs::read_to_string(&result.path).unwrap(), existing);
 

@@ -34,7 +34,11 @@ pub struct CreateResult {
 /// 创建 artifact：主文件 + `assets/od-design.css` + `manifest.json` + `handoff.md`。
 ///
 /// 对应 CLI `odl new`。MCP handler 负责把 `CreateResult` 序列化为 mcp.md 的 JSON 对象。
-pub fn run(kind_slug: &str, dir: &Path, options: CreateOptions<'_>) -> Result<CreateResult, McpError> {
+pub fn run(
+    kind_slug: &str,
+    dir: &Path,
+    options: CreateOptions<'_>,
+) -> Result<CreateResult, McpError> {
     let kind = ArtifactKind::from_slug(kind_slug).map_err(from_core_err)?;
     fs::create_dir_all(dir)?;
 
@@ -94,9 +98,9 @@ pub fn run(kind_slug: &str, dir: &Path, options: CreateOptions<'_>) -> Result<Cr
 /// 前者按“overwrite 参数与现状冲突”归 `invalid_args`，后者权宜归 `invalid_args`，待 spec 补齐。
 fn from_core_err(err: OdError) -> McpError {
     match err {
-        OdError::ArtifactKindUnknown(k) => McpError::InvalidArgs(format!(
-            "unknown kind `{k}`; use html, docs, or slides"
-        )),
+        OdError::ArtifactKindUnknown(k) => {
+            McpError::InvalidArgs(format!("unknown kind `{k}`; use html, docs, or slides"))
+        }
         OdError::AlreadyExists(p) => McpError::InvalidArgs(format!(
             "{} already exists; pass overwrite to replace",
             p.display()

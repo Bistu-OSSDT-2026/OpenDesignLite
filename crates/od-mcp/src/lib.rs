@@ -11,8 +11,8 @@ pub mod tools;
 
 use schemars::schema_for;
 use tools::dto::{
-    CreateRequest, CreateResponse, ExportRequest, ExportResponse, HandoffRequest,
-    HandoffResponse, PreviewRequest, PreviewResponse,
+    CreateRequest, CreateResponse, ExportRequest, ExportResponse, HandoffRequest, HandoffResponse,
+    PreviewRequest, PreviewResponse,
 };
 
 pub const MCP_SERVER_NAME: &str = "open-design-lite";

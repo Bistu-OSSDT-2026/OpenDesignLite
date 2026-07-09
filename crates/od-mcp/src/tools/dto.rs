@@ -234,10 +234,7 @@ mod tests {
         };
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["path"], "D:/work/demo/handoff.md");
-        assert!(json["content"]
-            .as_str()
-            .unwrap()
-            .starts_with("# Handoff:"));
+        assert!(json["content"].as_str().unwrap().starts_with("# Handoff:"));
     }
 
     /// export 请求反序列化（M4 前无 run，但 schema 要有，供 tools/list 一致性）。
@@ -261,23 +258,55 @@ mod tests {
     #[test]
     fn schemas_are_generated() {
         for (label, schema) in [
-            ("CreateRequest", serde_json::to_value(schemars::schema_for!(CreateRequest)).unwrap()),
-            ("CreateResponse", serde_json::to_value(schemars::schema_for!(CreateResponse)).unwrap()),
-            ("PreviewRequest", serde_json::to_value(schemars::schema_for!(PreviewRequest)).unwrap()),
-            ("PreviewResponse", serde_json::to_value(schemars::schema_for!(PreviewResponse)).unwrap()),
-            ("HandoffRequest", serde_json::to_value(schemars::schema_for!(HandoffRequest)).unwrap()),
-            ("HandoffResponse", serde_json::to_value(schemars::schema_for!(HandoffResponse)).unwrap()),
-            ("ExportRequest", serde_json::to_value(schemars::schema_for!(ExportRequest)).unwrap()),
-            ("ExportResponse", serde_json::to_value(schemars::schema_for!(ExportResponse)).unwrap()),
+            (
+                "CreateRequest",
+                serde_json::to_value(schemars::schema_for!(CreateRequest)).unwrap(),
+            ),
+            (
+                "CreateResponse",
+                serde_json::to_value(schemars::schema_for!(CreateResponse)).unwrap(),
+            ),
+            (
+                "PreviewRequest",
+                serde_json::to_value(schemars::schema_for!(PreviewRequest)).unwrap(),
+            ),
+            (
+                "PreviewResponse",
+                serde_json::to_value(schemars::schema_for!(PreviewResponse)).unwrap(),
+            ),
+            (
+                "HandoffRequest",
+                serde_json::to_value(schemars::schema_for!(HandoffRequest)).unwrap(),
+            ),
+            (
+                "HandoffResponse",
+                serde_json::to_value(schemars::schema_for!(HandoffResponse)).unwrap(),
+            ),
+            (
+                "ExportRequest",
+                serde_json::to_value(schemars::schema_for!(ExportRequest)).unwrap(),
+            ),
+            (
+                "ExportResponse",
+                serde_json::to_value(schemars::schema_for!(ExportResponse)).unwrap(),
+            ),
         ] {
-            assert!(!schema.as_object().unwrap().is_empty(), "{label} schema empty");
+            assert!(
+                !schema.as_object().unwrap().is_empty(),
+                "{label} schema empty"
+            );
         }
     }
 
     /// lib.rs 的 tool_input_schema / tool_output_schema 能调度到正确的 schema。
     #[test]
     fn schema_dispatch() {
-        for name in ["artifact_create", "artifact_preview", "artifact_handoff", "artifact_export"] {
+        for name in [
+            "artifact_create",
+            "artifact_preview",
+            "artifact_handoff",
+            "artifact_export",
+        ] {
             assert!(
                 crate::tool_input_schema(name).is_some(),
                 "{name} input schema missing"
