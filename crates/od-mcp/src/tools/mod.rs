@@ -3,6 +3,7 @@
 //! Spec: docs/specs/mcp.md
 
 pub mod create;
+pub mod dto;
 pub mod export;
 pub mod handoff;
 pub mod preview;
