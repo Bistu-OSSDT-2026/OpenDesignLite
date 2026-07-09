@@ -235,12 +235,7 @@ fn export_unsupported_format_returns_error() {
         .success();
 
     odl()
-        .args([
-            "export",
-            root.to_str().unwrap(),
-            "--format",
-            "pptx",
-        ])
+        .args(["export", root.to_str().unwrap(), "--format", "pptx"])
         .assert()
         .code(3)
         .stderr(predicate::str::contains("format_unsupported"));

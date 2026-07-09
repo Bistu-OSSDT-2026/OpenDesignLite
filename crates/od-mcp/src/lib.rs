@@ -462,7 +462,10 @@ mod tests {
             let schema = tool_input_schema(name).expect("schema");
             let text = schema.to_string();
             assert!(!text.contains("\"$ref\""), "{name} schema has $ref");
-            assert!(!text.contains("definitions"), "{name} schema has definitions");
+            assert!(
+                !text.contains("definitions"),
+                "{name} schema has definitions"
+            );
         }
     }
 }

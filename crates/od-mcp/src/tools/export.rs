@@ -17,12 +17,7 @@ pub struct ExportToolOptions<'a> {
 /// 导出 artifact。对应 CLI `odl export`。
 pub fn run(options: ExportToolOptions<'_>) -> Result<ExportResult, McpError> {
     let format = ExportFormat::parse(options.format).map_err(from_core_err)?;
-    export::run(
-        options.dir,
-        format,
-        ExportOptions { out: options.out },
-    )
-    .map_err(from_core_err)
+    export::run(options.dir, format, ExportOptions { out: options.out }).map_err(from_core_err)
 }
 
 fn from_core_err(err: OdError) -> McpError {

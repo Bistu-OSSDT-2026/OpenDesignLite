@@ -133,9 +133,8 @@ fn export_zip(artifact: &Artifact, out: &Path) -> Result<()> {
         }
     }
 
-    let file = File::create(out).map_err(|e| {
-        OdError::ExportFailed(format!("create zip {}: {e}", out.display()))
-    })?;
+    let file = File::create(out)
+        .map_err(|e| OdError::ExportFailed(format!("create zip {}: {e}", out.display())))?;
     let mut zip = ZipWriter::new(file);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
@@ -154,13 +153,11 @@ fn export_zip(artifact: &Artifact, out: &Path) -> Result<()> {
         let name = zip_path(&rel);
         if abs.is_dir() {
             let dir_name = format!("{}/", name.trim_end_matches('/'));
-            zip.add_directory(&dir_name, options).map_err(|e| {
-                OdError::ExportFailed(format!("zip directory `{dir_name}`: {e}"))
-            })?;
+            zip.add_directory(&dir_name, options)
+                .map_err(|e| OdError::ExportFailed(format!("zip directory `{dir_name}`: {e}")))?;
         } else {
-            let data = fs::read(&abs).map_err(|e| {
-                OdError::ExportFailed(format!("read {}: {e}", abs.display()))
-            })?;
+            let data = fs::read(&abs)
+                .map_err(|e| OdError::ExportFailed(format!("read {}: {e}", abs.display())))?;
             zip.start_file(&name, options)
                 .map_err(|e| OdError::ExportFailed(format!("zip start `{name}`: {e}")))?;
             zip.write_all(&data)
@@ -174,9 +171,8 @@ fn export_zip(artifact: &Artifact, out: &Path) -> Result<()> {
 }
 
 fn collect_zip_entries(root: &Path, dir: &Path, out: &mut Vec<String>) -> Result<()> {
-    let read = fs::read_dir(dir).map_err(|e| {
-        OdError::ExportFailed(format!("read dir {}: {e}", dir.display()))
-    })?;
+    let read = fs::read_dir(dir)
+        .map_err(|e| OdError::ExportFailed(format!("read dir {}: {e}", dir.display())))?;
     for entry in read {
         let entry = entry.map_err(|e| OdError::ExportFailed(e.to_string()))?;
         let path = entry.path();
@@ -236,16 +232,14 @@ fn export_html(artifact: &Artifact, out: &Path) -> Result<()> {
                     src.display()
                 )));
             }
-            fs::copy(&src, out.join(primary)).map_err(|e| {
-                OdError::ExportFailed(format!("copy {primary}: {e}"))
-            })?;
+            fs::copy(&src, out.join(primary))
+                .map_err(|e| OdError::ExportFailed(format!("copy {primary}: {e}")))?;
             copy_assets_dir(artifact, out)?;
         }
         ArtifactKind::Markdown => {
             let html = render_doc_html(artifact)?;
-            fs::write(out.join("doc.html"), html).map_err(|e| {
-                OdError::ExportFailed(format!("write doc.html: {e}"))
-            })?;
+            fs::write(out.join("doc.html"), html)
+                .map_err(|e| OdError::ExportFailed(format!("write doc.html: {e}")))?;
             copy_assets_dir(artifact, out)?;
             ensure_design_css(artifact, out)?;
         }
@@ -304,9 +298,8 @@ fn render_doc_html(artifact: &Artifact) -> Result<String> {
             src.display()
         )));
     }
-    let md = fs::read_to_string(&src).map_err(|e| {
-        OdError::ExportFailed(format!("read {}: {e}", src.display()))
-    })?;
+    let md = fs::read_to_string(&src)
+        .map_err(|e| OdError::ExportFailed(format!("read {}: {e}", src.display())))?;
     let fragment = comrak::markdown_to_html(&md, &comrak::Options::default());
     let title = artifact_name(artifact);
     Ok(format!(
@@ -330,11 +323,7 @@ fn visual_brief_for(artifact: &Artifact) -> VisualBrief {
     if let Ok(raw) = fs::read_to_string(artifact.manifest_path()) {
         if let Ok(manifest) = serde_json::from_str::<ArtifactManifest>(&raw) {
             if let Some(design) = manifest.design {
-                if let Some(brief) = design
-                    .visual_brief
-                    .as_deref()
-                    .and_then(VisualBrief::parse)
-                {
+                if let Some(brief) = design.visual_brief.as_deref().and_then(VisualBrief::parse) {
                     return brief;
                 }
             }
@@ -388,9 +377,8 @@ fn export_md(artifact: &Artifact, out: &Path) -> Result<()> {
             } else {
                 out.to_path_buf()
             };
-            fs::copy(&src, &dest).map_err(|e| {
-                OdError::ExportFailed(format!("copy doc.md: {e}"))
-            })?;
+            fs::copy(&src, &dest)
+                .map_err(|e| OdError::ExportFailed(format!("copy doc.md: {e}")))?;
             Ok(())
         }
         ArtifactKind::Html | ArtifactKind::Slides => Err(OdError::FormatUnsupported(format!(
@@ -658,14 +646,7 @@ mod tests {
         fs::write(root.join(".git").join("config"), "x").unwrap();
 
         let out = root.parent().unwrap().join("zip-demo.zip");
-        let result = run(
-            &root,
-            ExportFormat::Zip,
-            ExportOptions {
-                out: Some(&out),
-            },
-        )
-        .unwrap();
+        let result = run(&root, ExportFormat::Zip, ExportOptions { out: Some(&out) }).unwrap();
         assert_eq!(result.out, out);
 
         let file = File::open(&out).unwrap();
@@ -677,7 +658,9 @@ mod tests {
             assert!(!name.contains('\\'), "zip path must use /: {name}");
             names.push(name);
         }
-        assert!(names.iter().any(|n| n == "index.html" || n == "manifest.json"));
+        assert!(names
+            .iter()
+            .any(|n| n == "index.html" || n == "manifest.json"));
         assert!(names.iter().any(|n| n == "assets/od-design.css"));
         assert!(names.iter().any(|n| n == "handoff.md"));
         assert!(names.iter().all(|n| !n.starts_with(".odl")));
@@ -688,14 +671,7 @@ mod tests {
     fn html_export_is_offline_openable() {
         let (_tmp, root) = temp_artifact("html", "html-demo");
         let out = root.parent().unwrap().join("html-out");
-        run(
-            &root,
-            ExportFormat::Html,
-            ExportOptions {
-                out: Some(&out),
-            },
-        )
-        .unwrap();
+        run(&root, ExportFormat::Html, ExportOptions { out: Some(&out) }).unwrap();
 
         assert!(out.join("index.html").exists());
         assert!(out.join("assets").join("od-design.css").exists());
@@ -710,14 +686,7 @@ mod tests {
     fn docs_html_export_uses_design_css() {
         let (_tmp, root) = temp_artifact("docs", "docs-demo");
         let out = root.parent().unwrap().join("docs-html-out");
-        run(
-            &root,
-            ExportFormat::Html,
-            ExportOptions {
-                out: Some(&out),
-            },
-        )
-        .unwrap();
+        run(&root, ExportFormat::Html, ExportOptions { out: Some(&out) }).unwrap();
         assert!(out.join("doc.html").exists());
         assert!(out.join("assets").join("od-design.css").exists());
         let html = fs::read_to_string(out.join("doc.html")).unwrap();
@@ -729,14 +698,7 @@ mod tests {
     fn md_export_for_docs() {
         let (_tmp, root) = temp_artifact("docs", "md-demo");
         let out = root.parent().unwrap().join("exported.md");
-        run(
-            &root,
-            ExportFormat::Md,
-            ExportOptions {
-                out: Some(&out),
-            },
-        )
-        .unwrap();
+        run(&root, ExportFormat::Md, ExportOptions { out: Some(&out) }).unwrap();
         assert!(out.exists());
         let body = fs::read_to_string(&out).unwrap();
         assert!(!body.is_empty());
@@ -746,14 +708,7 @@ mod tests {
     fn md_unsupported_for_html() {
         let (_tmp, root) = temp_artifact("html", "md-bad");
         let out = root.parent().unwrap().join("nope.md");
-        let err = run(
-            &root,
-            ExportFormat::Md,
-            ExportOptions {
-                out: Some(&out),
-            },
-        )
-        .unwrap_err();
+        let err = run(&root, ExportFormat::Md, ExportOptions { out: Some(&out) }).unwrap_err();
         assert_eq!(err.code(), "format_unsupported");
     }
 
@@ -771,14 +726,7 @@ mod tests {
     fn zip_roundtrip_reads_manifest() {
         let (_tmp, root) = temp_artifact("slides", "slides-zip");
         let out = root.parent().unwrap().join("slides.zip");
-        run(
-            &root,
-            ExportFormat::Zip,
-            ExportOptions {
-                out: Some(&out),
-            },
-        )
-        .unwrap();
+        run(&root, ExportFormat::Zip, ExportOptions { out: Some(&out) }).unwrap();
         let file = File::open(&out).unwrap();
         let mut archive = ZipArchive::new(file).unwrap();
         let mut entry = archive.by_name("manifest.json").unwrap();
