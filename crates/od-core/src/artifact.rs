@@ -94,14 +94,24 @@ mod tests {
 
     #[test]
     fn slug_roundtrip() {
-        assert_eq!(ArtifactKind::from_slug("md").unwrap(), ArtifactKind::Markdown);
-        assert_eq!(ArtifactKind::from_slug("deck").unwrap(), ArtifactKind::Slides);
+        assert_eq!(
+            ArtifactKind::from_slug("md").unwrap(),
+            ArtifactKind::Markdown
+        );
+        assert_eq!(
+            ArtifactKind::from_slug("deck").unwrap(),
+            ArtifactKind::Slides
+        );
         assert!(ArtifactKind::from_slug("pdf").is_err());
     }
 
     #[test]
     fn primary_files_match_detection() {
-        for kind in [ArtifactKind::Html, ArtifactKind::Markdown, ArtifactKind::Slides] {
+        for kind in [
+            ArtifactKind::Html,
+            ArtifactKind::Markdown,
+            ArtifactKind::Slides,
+        ] {
             assert_eq!(detect_kind(kind.primary_file()), Some(kind));
         }
     }

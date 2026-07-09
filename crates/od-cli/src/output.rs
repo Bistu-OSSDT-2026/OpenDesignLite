@@ -3,6 +3,8 @@
 //!
 //! Spec: docs/specs/cli.md（JSON 输出 / 日志规则）
 
+use serde_json::Value;
+
 pub struct Reporter {
     pub json: bool,
     pub quiet: bool,
@@ -15,12 +17,29 @@ impl Reporter {
         }
     }
 
+    /// 输出成功信封（`--json` 模式写 stdout，否则忽略）。
+    pub fn success_artifact(&self, payload: &Value) {
+        if self.json {
+            let envelope = serde_json::json!({ "ok": true, "artifact": payload });
+            println!("{}", envelope);
+        }
+    }
+
+    /// 输出 warning 到 stderr（`--json` 模式仍写 stderr，不打扰 stdout 信封）。
+    pub fn warning(&self, msg: &str) {
+        if !self.quiet {
+            eprintln!("warning: {msg}");
+        }
+    }
+
     /// 输出错误。JSON 模式写 stdout 信封，否则写 stderr。
-    /// M1 会用 serde_json 生成完整信封（含 path 等字段）；本次为最小占位。
     pub fn error(&self, code: &str, message: &str) {
         if self.json {
-            let message = message.replace('\\', "\\\\").replace('"', "\\\"");
-            println!("{{\"ok\":false,\"error\":{{\"code\":\"{code}\",\"message\":\"{message}\"}}}}");
+            let envelope = serde_json::json!({
+                "ok": false,
+                "error": { "code": code, "message": message }
+            });
+            println!("{}", envelope);
         } else {
             eprintln!("error[{code}]: {message}");
         }

@@ -1,19 +1,21 @@
-//! `odl preview`：定位主文件（M1 由 od-preview 打开 WebView）。
+//! `odl preview`：调用 od-preview 打开预览窗口并监听文件变更。
 //!
 //! Spec: docs/specs/cli.md, preview.md
 
-use od_core::artifact::PRIMARY_FILE_ORDER;
-use od_core::{OdError, Result};
-use std::path::{Path, PathBuf};
+use od_preview::{preview, PreviewError, PreviewOptions};
+use std::path::Path;
 
-/// M0 行为保留：按检测顺序返回可预览主文件。
-/// M1 补齐：调用 `od_preview::preview(PreviewOptions)` 打开窗口并监听。
-pub fn run(root: &Path) -> Result<PathBuf> {
-    for candidate in PRIMARY_FILE_ORDER {
-        let path = root.join(candidate);
-        if path.exists() {
-            return Ok(path);
-        }
-    }
-    Err(OdError::PrimaryFileMissing(root.join("index.html")))
+pub fn run(
+    dir: &Path,
+    external_browser: bool,
+    no_watch: bool,
+    devtools: bool,
+) -> std::result::Result<(), PreviewError> {
+    let opts = PreviewOptions {
+        artifact_root: dir.to_path_buf(),
+        external_browser,
+        watch: !no_watch,
+        devtools,
+    };
+    preview(&opts)
 }

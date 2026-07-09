@@ -42,8 +42,10 @@ pub enum Command {
         dir: PathBuf,
         #[arg(long)]
         title: Option<String>,
-        #[arg(long, default_value = "editorial")]
-        brief: String,
+        /// Visual brief: `editorial` | `studio` | `workbench`。默认按 skill 或 kind 推断。
+        #[arg(long)]
+        brief: Option<String>,
+        /// 把 `od-design.css` 内联进 `<style data-od-design>` 而非外部 `<link>`。
         #[arg(long)]
         embed_css: bool,
         #[arg(long)]
@@ -74,5 +76,25 @@ pub enum Command {
         format: String,
         #[arg(long)]
         out: Option<PathBuf>,
+    },
+    /// 列出内置与 workspace 覆盖的 skills，或显示某个 skill 的正文。
+    Skill {
+        #[command(subcommand)]
+        action: Option<SkillAction>,
+        /// 列表模式输出 JSON 数组（无子命令时生效）。
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SkillAction {
+    /// 输出某个 skill 的 SKILL.md 正文（front matter 之后），供 agent 消费。
+    Show {
+        /// skill name（kebab-case）。
+        name: String,
+        /// 输出 JSON 对象（name/mode/description/body/root）。
+        #[arg(long)]
+        json: bool,
     },
 }

@@ -30,20 +30,57 @@ fn dispatch(command: &Command, reporter: &Reporter) -> od_core::Result<()> {
             commands::init::run(dir, name.as_deref(), *force)?;
             reporter.info(&format!("initialized {}", dir.display()));
         }
-        Command::New { kind, dir, .. } => {
-            let artifact = commands::new::run(kind, dir)?;
-            reporter.info(&format!("created {}", artifact.primary_path().display()));
+        Command::New {
+            kind,
+            dir,
+            title,
+            brief,
+            embed_css,
+            force,
+        } => {
+            let artifact = commands::new::run(
+                kind,
+                dir,
+                title.as_deref(),
+                brief.as_deref(),
+                *embed_css,
+                *force,
+                reporter,
+            )?;
+            if reporter.json {
+                let payload = serde_json::json!({
+                    "kind": artifact.kind.slug(),
+                    "root": artifact.root.display().to_string(),
+                    "primaryFile": artifact.kind.primary_file(),
+                });
+                reporter.success_artifact(&payload);
+            } else {
+                reporter.info(&format!("created {}", artifact.primary_path().display()));
+            }
         }
-        Command::Preview { dir, .. } => {
-            let target = commands::preview::run(dir)?;
-            reporter.info(&format!("preview target: {}", target.display()));
-            reporter.info("native shell preview is not implemented yet");
+        Command::Preview {
+            dir,
+            external_browser,
+            no_watch,
+            devtools,
+        } => {
+            // 预览错误独立于 OdError（od-core 不依赖 od-preview）。
+            match commands::preview::run(dir, *external_browser, *no_watch, *devtools) {
+                Ok(()) => reporter.info(&format!("preview closed: {}", dir.display())),
+                Err(e) => {
+                    reporter.error(e.code(), &e.to_string());
+                    std::process::exit(exit::code_for_preview(&e));
+                }
+            }
         }
         Command::Handoff { dir, stdout, agent } => {
-            commands::handoff::run(dir, agent, *stdout)?;
+            commands::handoff::run(dir, agent, *stdout, reporter)?;
         }
         Command::Export { dir, format, .. } => {
             commands::export::run(dir, format)?;
+        }
+        Command::Skill { action, json } => {
+            commands::skill::run(action.as_ref(), *json, reporter)?;
         }
     }
     Ok(())

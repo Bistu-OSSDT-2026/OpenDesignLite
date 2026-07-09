@@ -7,3 +7,10 @@ license.workspace = true
 [dependencies]
 od-core = { path = "../od-core" }
 thiserror = "1"
+comrak = "0.20"
+ammonia = "4"
+minijinja = "2"
+notify = "6"
+open = "5"
+wry = "0.55"
+tao = "0.34"

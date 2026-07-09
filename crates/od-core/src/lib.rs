@@ -17,4 +17,6 @@ pub mod workspace;
 
 pub use artifact::{Artifact, ArtifactKind};
 pub use error::{OdError, Result};
+pub use handoff::{HandoffAgent, HandoffInput};
+pub use skill::{discover, find, for_kind, Skill, SkillFrontMatter};
 pub use workspace::workspace_manifest_path;

@@ -191,11 +191,13 @@ M1 保留 fallback；后续稳定后可移除，改为 skill 缺失即报错。
 新增子命令，让 skill 对用户和外部 agent 可见。M2 的 MCP `skill_list` tool 将镜像同一份 `discover` + 格式化逻辑。
 
 ```text
-odl skill            # 列出 name | mode | description
-odl skill --json     # 输出 JSON 数组
+odl skill                  # 列出 name | mode | description
+odl skill --json           # 输出 JSON 数组
+odl skill show <name>      # 输出该 skill 的 SKILL.md 正文，供 agent 消费
+odl skill show <name> --json  # 输出 {name,mode,description,body,root} JSON 对象
 ```
 
-M1 只做列表；`skill show <name>`（输出 SKILL.md 正文，供 agent 消费）留到 M2。
+`skill show <name>`（输出 SKILL.md front matter 之后的正文）原计划 M2，已提前到 M1 实现：内核解析器保留 `body`，`Skill::body()` 访问器，CLI 子命令 `Show` 带可选 `--json`。未找到的 skill 返回 `SkillNotFound(name)` 错误（code `skill_not_found`，退出码 2）。
 
 ## 质量标准
 
@@ -229,6 +231,7 @@ M1 只做列表；`skill show <name>`（输出 SKILL.md 正文，供 agent 消�
 | workspace 覆盖生效 | `od-core` 单测 | `discover` 用 tempdir | 同名 skill 时 workspace 版本优先，结果 name 唯一 |
 | fallback 保留 | 集成测 | `od-cli` | skill 缺失时 `odl new` 仍生成 starter 主文件，且输出 warning |
 | `odl skill` 列表 | 集成测 | `od-cli` | `odl skill` 输出三行，`--json` 输出可被 `serde_json` 解析的数组 |
+| `odl skill show <name>` 输出正文 | 集成测 | `od-cli` | human 输出含 `# <name>` 标题与正文；`--json` 输出含非空 `body` 的对象；未知 name 返回 `skill_not_found`（退出码 2） |
 
 ## 变更记录
 
@@ -236,3 +239,4 @@ M1 只做列表；`skill show <name>`（输出 SKILL.md 正文，供 agent 消�
 |------|------|
 | 2026-07-01 | 初版草案。 |
 | 2026-07-07 | 补 Rust 模型（`Skill` / `discover` / `for_kind`）、解析器约束、workspace 覆盖规则、`odl new` 接入流程与 fallback、`odl skill` 命令；模板收进 skill 目录；测试落成可执行表。 |
+| 2026-07-09 | 提前实现 `skill show <name>`：`SkillFrontMatter.body` 保留 front matter 之后的正文，`Skill::body()` 访问器，CLI `SkillAction::Show` 子命令（含 `--json`）；新增 `OdError::SkillNotFound`（code `skill_not_found`，退出码 2）。`skill show` 测试落成可执行表。 |

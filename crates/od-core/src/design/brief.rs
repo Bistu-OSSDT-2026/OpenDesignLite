@@ -44,7 +44,11 @@ mod tests {
 
     #[test]
     fn brief_roundtrip() {
-        for b in [VisualBrief::Editorial, VisualBrief::Studio, VisualBrief::Workbench] {
+        for b in [
+            VisualBrief::Editorial,
+            VisualBrief::Studio,
+            VisualBrief::Workbench,
+        ] {
             assert_eq!(VisualBrief::parse(b.as_str()), Some(b));
         }
         assert_eq!(VisualBrief::parse("instrument"), None);
@@ -52,6 +56,9 @@ mod tests {
 
     #[test]
     fn slides_default_is_studio() {
-        assert_eq!(VisualBrief::default_for(ArtifactKind::Slides), VisualBrief::Studio);
+        assert_eq!(
+            VisualBrief::default_for(ArtifactKind::Slides),
+            VisualBrief::Studio
+        );
     }
 }
