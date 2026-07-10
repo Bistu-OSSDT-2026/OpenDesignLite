@@ -2039,7 +2039,7 @@ dependencies = [
 
 [[package]]
 name = "od-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -2053,7 +2053,7 @@ dependencies = [
 
 [[package]]
 name = "od-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "comrak",
  "serde",
@@ -2064,7 +2064,7 @@ dependencies = [
 
 [[package]]
 name = "od-mcp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "od-core",
  "schemars",
@@ -2075,7 +2075,7 @@ dependencies = [
 
 [[package]]
 name = "od-preview"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ammonia",
  "comrak",

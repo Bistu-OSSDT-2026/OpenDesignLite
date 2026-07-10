@@ -12,7 +12,7 @@
 //! Spec: docs/specs/mcp.md（artifact_preview）, preview.md
 
 use crate::error::McpError;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// `artifact_preview` 输入（对齐 docs/specs/mcp.md）。
@@ -31,9 +31,16 @@ pub struct PreviewResult {
     pub mode: &'static str,
 }
 
-/// 启动 `odl preview` 子进程并立即返回。对应 CLI `odl preview`。
-pub fn run(options: PreviewOptions<'_>) -> Result<PreviewResult, McpError> {
-    let mut cmd = Command::new("odl");
+/// Resolve the running `odl` binary. Release assets may be named
+/// `odl-windows-x64.exe` etc.; spawning a bare `odl` misses them on Windows.
+fn odl_executable() -> Result<PathBuf, McpError> {
+    std::env::current_exe().map_err(|err| {
+        McpError::PreviewUnavailable(format!("cannot resolve current odl executable: {err}"))
+    })
+}
+
+fn build_preview_command(exe: &Path, options: &PreviewOptions<'_>) -> Command {
+    let mut cmd = Command::new(exe);
     cmd.arg("preview").arg(options.dir);
 
     if options.external_browser {
@@ -43,10 +50,18 @@ pub fn run(options: PreviewOptions<'_>) -> Result<PreviewResult, McpError> {
     if !options.watch {
         cmd.arg("--no-watch");
     }
+    cmd
+}
+
+/// 启动 `odl preview` 子进程并立即返回。对应 CLI `odl preview`。
+pub fn run(options: PreviewOptions<'_>) -> Result<PreviewResult, McpError> {
+    let exe = odl_executable()?;
+    let mut cmd = build_preview_command(&exe, &options);
 
     cmd.spawn().map_err(|err| {
         McpError::PreviewUnavailable(format!(
-            "failed to spawn `odl preview` (is `odl` on PATH?): {err}"
+            "failed to spawn `{} preview`: {err}",
+            exe.display()
         ))
     })?;
 
@@ -78,26 +93,22 @@ mod tests {
         assert_eq!(err.code(), "preview_unavailable");
     }
 
-    /// `run` 在 `odl` 缺失时也必须归 `preview_unavailable`（不 panic）。
-    /// 真实环境若装了 `odl`，此分支会真的起预览；故测试用 `external_browser`
-    /// 仅断言错误路径，不依赖外部状态。重跑 `run` 时若 `odl` 在 PATH 上则跳过。
+    /// 可执行文件不存在时 `run` 归 `preview_unavailable`（不 panic、不阻塞）。
     #[test]
-    fn run_reports_unavailable_when_odl_missing() {
-        // 临时把 PATH 清空，模拟 `odl` 不在 PATH 的情况。
-        let result = run(PreviewOptions {
-            dir: Path::new("."),
-            external_browser: false,
-            watch: true,
-        });
-
-        match result {
-            Ok(r) => {
-                // 真实构建环境若恰好有 odl 会成功——此时只断言形状，不卡资源。
-                assert!(r.started);
-                assert_eq!(r.mode, "webview");
-            }
-            Err(e) => assert_eq!(e.code(), "preview_unavailable"),
-        }
+    fn run_reports_unavailable_when_executable_missing() {
+        let mut cmd = build_preview_command(
+            Path::new("odl-preview-definitely-not-on-path-xyz"),
+            &PreviewOptions {
+                dir: Path::new("."),
+                external_browser: false,
+                watch: true,
+            },
+        );
+        let err = cmd
+            .spawn()
+            .map_err(|e| McpError::PreviewUnavailable(e.to_string()))
+            .unwrap_err();
+        assert_eq!(err.code(), "preview_unavailable");
     }
 
     /// mode 取值随 external_browser 变化（仅校验映射逻辑，不实际 spawn）。
