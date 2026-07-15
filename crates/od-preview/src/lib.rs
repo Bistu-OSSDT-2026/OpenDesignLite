@@ -91,6 +91,13 @@ pub fn file_url(path: &Path) -> String {
     }
 }
 
+/// 单实例锁文件（`.odl/preview.lock`）。MCP 侧按 mtime 心跳判断窗口是否存活。
+///
+/// Spec: docs/specs/preview.md（稳定性 / 单实例锁）
+pub fn lock_path(root: &Path) -> PathBuf {
+    root.join(".odl").join("preview.lock")
+}
+
 /// 预览入口：检测主文件 → 渲染（Markdown）→ 启动 watcher → 加载 WebView。
 ///
 /// Spec: docs/specs/preview.md
@@ -111,7 +118,13 @@ pub fn preview(options: &PreviewOptions) -> Result<(), PreviewError> {
         .canonicalize()
         .map_err(|_e| PreviewError::PrimaryFileMissing(primary))?;
 
-    let preview_file = preview_file_for(root, &primary, kind)?;
+    // 渲染失败（如 Markdown 语法炸了）不再直接退出：改为在窗口里展示
+    // 内联错误页（spec：错误页必须展示、不应阻塞）。Markdown 场景下错误页
+    // 与正常渲染共用 .odl/preview.html，watcher 重渲染成功后自动恢复。
+    let preview_file = match preview_file_for(root, &primary, kind) {
+        Ok(p) => p,
+        Err(err) => write_error_page(root, &err)?,
+    };
     let url = file_url(&preview_file);
 
     // 外部浏览器分支：不弹原生窗口，交给系统浏览器，watcher 不保证刷新。
@@ -124,22 +137,59 @@ pub fn preview(options: &PreviewOptions) -> Result<(), PreviewError> {
     let (reload_tx, reload_rx) = mpsc::channel::<()>();
     // watcher 必须在主线程保活：notify 的事件派发依赖创建它的线程。
     // 用 Option 装着，和下面的 open_webview 在同一作用域，活到事件循环结束。
+    // watcher 初始化失败允许继续无 watch 预览（spec：watch_failed 不阻塞）。
     let root_for_watch = root.to_path_buf();
     let primary_for_watch = primary.clone();
     let _watcher = if options.watch {
-        Some(watch::watch(root, move || {
+        match watch::watch(root, move || {
             if kind == ArtifactKind::Markdown {
                 if let Err(e) = write_markdown_preview(&root_for_watch, &primary_for_watch) {
                     eprintln!("[od-preview] markdown render failed: {e}");
                 }
             }
             let _ = reload_tx.send(());
-        })?)
+        }) {
+            Ok(w) => Some(w),
+            Err(e) => {
+                eprintln!("[od-preview] watch failed, continuing without live-reload: {e}");
+                None
+            }
+        }
     } else {
         None
     };
 
-    webview::open_webview(options, &url, reload_rx)
+    // 写单实例锁（webview 常驻分支才有意义）；事件循环内按心跳刷新，
+    // 窗口关闭时清理。清理不依赖 graceful shutdown——异常退出时锁会
+    // 在心跳窗口后过期，由下次启动兜底（spec：稳定性/单实例锁）。
+    let lock = lock_path(root);
+    if let Some(parent) = lock.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(&lock, std::process::id().to_string());
+
+    // WebView 初始化失败 → 自动 fallback 外部浏览器；两者都失败才报错
+    //（spec：稳定性/自动 fallback）。
+    match webview::open_webview(options, &url, reload_rx, Some(lock.clone())) {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            let _ = std::fs::remove_file(&lock);
+            eprintln!("[od-preview] webview failed ({err}), falling back to external browser");
+            fallback::open_external(&preview_file)
+        }
+    }
+}
+
+/// 把内联错误页写到 `.odl/preview.html` 并返回其路径，供 WebView 展示。
+fn write_error_page(root: &Path, err: &PreviewError) -> Result<PathBuf, PreviewError> {
+    let html = error_page::render_error_page(err, &root.display().to_string());
+    let tmp = root.join(".odl").join("preview.html");
+    std::fs::create_dir_all(tmp.parent().expect("tmp has parent"))
+        .map_err(|e| PreviewError::RenderFailed(format!("create tmp dir: {e}")))?;
+    std::fs::write(&tmp, &html)
+        .map_err(|e| PreviewError::RenderFailed(format!("write error page: {e}")))?;
+    tmp.canonicalize()
+        .map_err(|e| PreviewError::RenderFailed(e.to_string()))
 }
 
 fn preview_file_for(

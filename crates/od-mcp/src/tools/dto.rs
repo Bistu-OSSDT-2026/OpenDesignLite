@@ -31,6 +31,10 @@ pub struct CreateRequest {
     /// 目标已存在时是否覆盖。
     #[serde(default)]
     pub overwrite: bool,
+    /// 创建成功后自动弹预览窗口（默认 true）；无 GUI 时降级不报错。
+    /// Spec: mcp.md（artifact_create autoPreview）。
+    #[serde(default = "default_true")]
+    pub auto_preview: bool,
 }
 
 /// `artifact_create` 输出里的 artifact 对象。
@@ -43,10 +47,14 @@ pub struct CreateArtifactDto {
     pub handoff: String,
 }
 
-/// `artifact_create` 输出。Spec: mcp.md（输出 `{artifact: {...}}`）。
+/// `artifact_create` 输出。Spec: mcp.md（输出 `{artifact: {...}, nextStep}`）。
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateResponse {
     pub artifact: CreateArtifactDto,
+    /// 给 agent 的下一步提示（additive，向后兼容）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_step: Option<String>,
 }
 
 // ─────────────────────────── artifact_preview ──────────────────────────
@@ -66,9 +74,13 @@ pub struct PreviewRequest {
 
 /// `artifact_preview` 输出。`mode` = `webview` | `external`。
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct PreviewResponse {
     pub started: bool,
     pub mode: String,
+    /// 命中单实例锁时为 true（additive，向后兼容）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub already_running: Option<bool>,
 }
 
 // ─────────────────────────── artifact_handoff ──────────────────────────
@@ -169,6 +181,12 @@ mod tests {
         assert_eq!(req.visual_brief, "editorial");
         assert_eq!(req.title, Some("Demo".into()));
         assert!(!req.overwrite);
+        assert!(req.auto_preview, "autoPreview defaults to true");
+
+        // 显式关闭 autoPreview（CI/自动化场景）。
+        let json_off = r#"{"kind": "html", "dir": ".", "autoPreview": false}"#;
+        let req_off: CreateRequest = serde_json::from_str(json_off).unwrap();
+        assert!(!req_off.auto_preview);
 
         let back = serde_json::to_value(&req).unwrap();
         assert_eq!(back["kind"], "html");
@@ -186,11 +204,13 @@ mod tests {
                 primary_file: "index.html".into(),
                 handoff: "handoff.md".into(),
             },
+            next_step: Some("Call artifact_preview.".into()),
         };
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["artifact"]["kind"], "html");
         assert_eq!(json["artifact"]["primaryFile"], "index.html");
         assert_eq!(json["artifact"]["handoff"], "handoff.md");
+        assert_eq!(json["nextStep"], "Call artifact_preview.");
     }
 
     /// preview request 从 mcp.md JSON 反序列化，包括 `watch` 默认值。
@@ -216,10 +236,21 @@ mod tests {
         let resp = PreviewResponse {
             started: true,
             mode: "webview".into(),
+            already_running: None,
         };
         let json = serde_json::to_value(&resp).unwrap();
         assert!(json["started"].as_bool().unwrap());
         assert_eq!(json["mode"], "webview");
+        // already_running 为 None 时不出现在 JSON 里（向后兼容）。
+        assert!(json.get("alreadyRunning").is_none());
+
+        let resp2 = PreviewResponse {
+            started: true,
+            mode: "webview".into(),
+            already_running: Some(true),
+        };
+        let json2 = serde_json::to_value(&resp2).unwrap();
+        assert_eq!(json2["alreadyRunning"], true);
     }
 
     /// handoff request 从 mcp.md JSON 反序列化，含 agent 默认值。

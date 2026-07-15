@@ -46,7 +46,8 @@ pub fn tool_input_schema(name: &str) -> Option<serde_json::Value> {
                 "dir": {"type": "string", "description": "artifact root directory"},
                 "title": {"type": "string"},
                 "visualBrief": {"type": "string", "description": "editorial | studio | workbench"},
-                "overwrite": {"type": "boolean", "default": false}
+                "overwrite": {"type": "boolean", "default": false},
+                "autoPreview": {"type": "boolean", "default": true, "description": "auto-open the live preview window after create (degrades silently without GUI)"}
             },
             "required": ["kind", "dir"],
             "additionalProperties": false
@@ -317,22 +318,45 @@ fn call_tool(params: Value) -> Result<Value, error::McpError> {
         "artifact_create" => {
             let req: CreateRequest = serde_json::from_value(arguments)
                 .map_err(|err| error::McpError::InvalidArgs(err.to_string()))?;
+            let dir = PathBuf::from(&req.dir);
             let result = tools::create::run(
                 &req.kind,
-                &PathBuf::from(&req.dir),
+                &dir,
                 tools::create::CreateOptions {
                     title: req.title.as_deref(),
                     visual_brief: &req.visual_brief,
                     overwrite: req.overwrite,
                 },
             )?;
+            let root = path_string(&result.artifact.root);
+            // autoPreview（默认开）：创建成功后自动弹预览。失败降级不报错——
+            // create 本身已成功，无 GUI 环境只在 nextStep 里注明（mcp.md）。
+            let next_step = if req.auto_preview {
+                match tools::preview::run(tools::preview::PreviewOptions {
+                    dir: &result.artifact.root,
+                    external_browser: false,
+                    watch: true,
+                }) {
+                    Ok(_) => format!(
+                        "Preview window opened. Edit files under {root} and it live-reloads. \
+                         If no window appeared, call artifact_preview with dir=\"{root}\"."
+                    ),
+                    Err(err) => format!(
+                        "Artifact created, but the preview window could not start ({err}). \
+                         Call artifact_preview with dir=\"{root}\" to retry."
+                    ),
+                }
+            } else {
+                format!("Call artifact_preview with dir=\"{root}\" to open the live preview window.")
+            };
             serde_json::to_value(CreateResponse {
                 artifact: tools::dto::CreateArtifactDto {
                     kind: result.artifact.kind.slug().to_string(),
-                    root: path_string(&result.artifact.root),
+                    root,
                     primary_file: result.artifact.kind.primary_file().to_string(),
                     handoff: path_string(&result.artifact.handoff_path()),
                 },
+                next_step: Some(next_step),
             })
             .expect("create response serializes")
         }
@@ -348,6 +372,7 @@ fn call_tool(params: Value) -> Result<Value, error::McpError> {
             serde_json::to_value(PreviewResponse {
                 started: result.started,
                 mode: result.mode.to_string(),
+                already_running: result.already_running.then_some(true),
             })
             .expect("preview response serializes")
         }
@@ -397,7 +422,7 @@ fn call_tool(params: Value) -> Result<Value, error::McpError> {
 
 fn tool_description(name: &str) -> &'static str {
     match name {
-        "artifact_create" => "Create an artifact using the shared od-core creation pipeline.",
+        "artifact_create" => "Create an artifact using the shared od-core creation pipeline. Auto-opens the live preview window by default (autoPreview=true); pass autoPreview=false for CI/scripted runs.",
         "artifact_preview" => "Required preview path for coding agents: start the persistent live-reloading odl preview window for an artifact dir. Call this instead of opening a system browser (no start/xdg-open/open/Playwright). Defaults: externalBrowser=false (webview window), watch=true.",
         "artifact_handoff" => "Read or generate artifact handoff.md content.",
         "artifact_export" => "Export an artifact as html, md, zip, or pdf.",

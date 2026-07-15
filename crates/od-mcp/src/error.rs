@@ -14,6 +14,9 @@ pub enum McpError {
     ManifestInvalid(String),
     #[error("preview unavailable: {0}")]
     PreviewUnavailable(String),
+    /// 预览子进程 spawn 成功但短时间内退出（mcp.md：不得假装成功）。
+    #[error("preview crashed: {0}")]
+    PreviewCrashed(String),
     #[error("not implemented: {0}")]
     NotImplemented(&'static str),
     #[error("format unsupported: {0}")]
@@ -33,6 +36,7 @@ impl McpError {
             Self::ArtifactNotFound(_) => "artifact_not_found",
             Self::ManifestInvalid(_) => "manifest_invalid",
             Self::PreviewUnavailable(_) => "preview_unavailable",
+            Self::PreviewCrashed(_) => "preview_crashed",
             Self::NotImplemented(_) => "not_implemented",
             Self::FormatUnsupported(_) => "format_unsupported",
             Self::ExportFailed(_) => "export_failed",

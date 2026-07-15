@@ -60,7 +60,7 @@ fn code_for_mcp(err: &McpError) -> i32 {
         | McpError::ManifestInvalid(_)
         | McpError::FormatUnsupported(_)
         | McpError::ResourceMissing(_) => INVALID_ARTIFACT,
-        McpError::PreviewUnavailable(_) => PREVIEW_FAILED,
+        McpError::PreviewUnavailable(_) | McpError::PreviewCrashed(_) => PREVIEW_FAILED,
         McpError::ExportFailed(_) | McpError::PdfBackendMissing(_) => EXPORT_FAILED,
         McpError::NotImplemented(_) => NOT_IMPLEMENTED,
     }
