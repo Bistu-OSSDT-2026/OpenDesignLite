@@ -7,6 +7,8 @@ license.workspace = true
 [dependencies]
 od-core = { path = "../od-core" }
 thiserror = "1"
+# 壳标题读取 manifest.json（od-core 已依赖 serde_json，同版本复用）
+serde_json = "1"
 # WebView + 窗口事件循环
 wry = "0.48"
 tao = "0.31"

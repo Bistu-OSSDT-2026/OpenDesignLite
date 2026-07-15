@@ -1,11 +1,16 @@
 //! WebView 生命周期（wry + 事件循环）。
 //! 安全规则：预览页面不得获得 shell / 文件系统 / 命令执行 IPC。
 //!
-//! Spec: docs/specs/preview.md（加载策略 / 稳定性 / 安全规则）
+//! 加载策略：custom protocol `odl-shell` 服务壳页面，产物在固定视口 iframe 里
+//! 渲染（见 `shell.rs`；examples/shell_spike.rs 验证记录）。
+//!
+//! Spec: docs/specs/preview.md（加载策略 / 窗口与视口 / 稳定性 / 安全规则）
 
+use crate::shell::{self, ShellConfig};
 use crate::{PreviewError, PreviewOptions};
 use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tao::{
     dpi::LogicalSize,
@@ -22,9 +27,12 @@ const RELOAD_POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// 2s 心跳留足余量（spec：稳定性/单实例锁）。
 const LOCK_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 
-/// 预览窗口初始尺寸（逻辑像素）。窗口仍可自由缩放，只是首次打开给一个
-/// 适合看产物的标准大小，而不是 tao 默认的极小窗口。
-const DEFAULT_WINDOW_SIZE: LogicalSize<f64> = LogicalSize::new(1280.0, 800.0);
+/// 窗口尺寸 = 固定视口 + 壳顶栏（设计常量，非百分比），保证内容区精确等于
+/// 部署后浏览器视口（spec：窗口与视口）。
+fn window_size_for(config: &ShellConfig) -> LogicalSize<f64> {
+    let (vw, vh) = shell::viewport_for(config.kind);
+    LogicalSize::new(f64::from(vw), f64::from(vh + shell::SHELL_HEADER_HEIGHT))
+}
 
 /// WebView2 user data folder：固定到每用户目录并全实例共享持久复用。
 /// 不固定时 WebView2 会落到可执行文件旁或临时目录——只读安装位置或
@@ -43,43 +51,56 @@ fn webview_data_dir() -> Option<PathBuf> {
     Some(dir)
 }
 
-/// 打开 WebView 并加载 `url`（`file://` 主文件或渲染后的临时 HTML）。
+/// 打开壳窗口并在固定视口 iframe 里加载产物。
 ///
 /// `reload_rx` 用于 watch 联动：watch 后台线程收到文件变更信号后塞进通道，
-/// 事件循环每轮轮询通道，收到信号就 `load_url` 重新加载。
+/// 事件循环每轮轮询通道，收到信号只刷新 iframe（壳与面板状态保留）。
 ///
 /// `lock` 为单实例锁文件路径：事件循环按心跳刷新其 mtime，`CloseRequested`
 /// 时删除。异常退出不清理也没关系——锁靠 mtime 过期兜底。
 pub fn open_webview(
     options: &PreviewOptions,
-    url: &str,
+    config: ShellConfig,
     reload_rx: Receiver<()>,
     lock: Option<PathBuf>,
 ) -> Result<(), PreviewError> {
+    let size = window_size_for(&config);
+    let title = format!("{} — Open Design Lite", config.title);
+
     let event_loop = EventLoop::new();
+    // 固定尺寸、不可缩放：resizable(false) + min/max 双保险
+    //（部分平台/窗口管理器会无视 resizable）。
     let window = WindowBuilder::new()
-        .with_title("Open Design Lite")
-        .with_inner_size(DEFAULT_WINDOW_SIZE)
+        .with_title(&title)
+        .with_inner_size(size)
+        .with_min_inner_size(size)
+        .with_max_inner_size(size)
+        .with_resizable(false)
         .build(&event_loop)
         .map_err(|e| PreviewError::WebviewFailed(format!("create window: {e}")))?;
 
     // WebContext 承载 user data folder；它必须活得比 webview 久，
     // 所以随 webview 一起 move 进事件循环闭包。
     let mut web_context = WebContext::new(webview_data_dir());
-    let mut builder = WebViewBuilder::with_web_context(&mut web_context).with_url(url);
+    let handler_config = Arc::new(config);
+    let mut builder = WebViewBuilder::with_web_context(&mut web_context)
+        .with_custom_protocol("odl-shell".to_string(), {
+            let config = Arc::clone(&handler_config);
+            move |_id, request| shell::handle_request(&config, &request)
+        })
+        .with_url(shell::entry_url());
     if options.devtools {
         builder = builder.with_devtools(true);
     }
 
     // _webview 必须保活到事件循环结束，否则窗口立刻关闭。
-    // 用 Option 以便在 reload 分支里取用 load_url。
+    // 用 Option 以便在 reload 分支里取用 evaluate_script。
     let webview = Some(
         builder
             .build(&window)
             .map_err(|e| PreviewError::WebviewFailed(format!("build webview: {e}")))?,
     );
 
-    let url_owned = url.to_string();
     let mut last_heartbeat = Instant::now();
     event_loop.run(move |event, _, control_flow| {
         // WebContext 随闭包保活（webview 依赖它）。
@@ -100,10 +121,10 @@ pub fn open_webview(
 
         // 轮询 reload 通道：非阻塞地看一眼有没有信号。
         // try_recv 在空通道时返回 Err，正常情况不是错误。
+        // 只刷新 iframe（带时间戳防缓存），壳与面板折叠状态不重置。
         while let Ok(()) = reload_rx.try_recv() {
             if let Some(wv) = webview.as_ref() {
-                // 重新加载同一个 URL。Markdown 场景下文件已被 watch 逻辑重写。
-                if let Err(e) = wv.load_url(&url_owned) {
+                if let Err(e) = wv.evaluate_script(shell::RELOAD_SCRIPT) {
                     eprintln!("[od-preview] reload failed: {e}");
                 }
             }

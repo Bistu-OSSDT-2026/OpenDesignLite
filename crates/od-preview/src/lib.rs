@@ -7,6 +7,7 @@ pub mod detect;
 pub mod error_page;
 pub mod fallback;
 pub mod render;
+pub mod shell;
 pub mod watch;
 pub mod webview;
 
@@ -121,11 +122,12 @@ pub fn preview(options: &PreviewOptions) -> Result<(), PreviewError> {
     // 渲染失败（如 Markdown 语法炸了）不再直接退出：改为在窗口里展示
     // 内联错误页（spec：错误页必须展示、不应阻塞）。Markdown 场景下错误页
     // 与正常渲染共用 .odl/preview.html，watcher 重渲染成功后自动恢复。
+    // webview 走壳（custom protocol），preview_file 只服务外部浏览器分支
+    // 与 webview 失败后的 fallback。
     let preview_file = match preview_file_for(root, &primary, kind) {
         Ok(p) => p,
         Err(err) => write_error_page(root, &err)?,
     };
-    let url = file_url(&preview_file);
 
     // 外部浏览器分支：不弹原生窗口，交给系统浏览器，watcher 不保证刷新。
     if options.external_browser {
@@ -170,7 +172,12 @@ pub fn preview(options: &PreviewOptions) -> Result<(), PreviewError> {
 
     // WebView 初始化失败 → 自动 fallback 外部浏览器；两者都失败才报错
     //（spec：稳定性/自动 fallback）。
-    match webview::open_webview(options, &url, reload_rx, Some(lock.clone())) {
+    let config = shell::ShellConfig {
+        artifact_root: root.to_path_buf(),
+        kind,
+        title: artifact_title(root),
+    };
+    match webview::open_webview(options, config, reload_rx, Some(lock.clone())) {
         Ok(()) => Ok(()),
         Err(err) => {
             let _ = std::fs::remove_file(&lock);
@@ -178,6 +185,21 @@ pub fn preview(options: &PreviewOptions) -> Result<(), PreviewError> {
             fallback::open_external(&preview_file)
         }
     }
+}
+
+/// 壳顶栏标题：manifest.json 的 `title`，读不到时回退目录名。
+fn artifact_title(root: &Path) -> String {
+    std::fs::read_to_string(root.join("manifest.json"))
+        .ok()
+        .and_then(|raw| serde_json::from_str::<od_core::manifest::ArtifactManifest>(&raw).ok())
+        .map(|m| m.title)
+        .filter(|t| !t.trim().is_empty())
+        .unwrap_or_else(|| {
+            root.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("artifact")
+                .to_string()
+        })
 }
 
 /// 把内联错误页写到 `.odl/preview.html` 并返回其路径，供 WebView 展示。
