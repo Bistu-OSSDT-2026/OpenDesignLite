@@ -84,6 +84,21 @@ pub enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// 检测编码 Agent 并写入 open-design-lite 的 MCP 配置。
+    Setup {
+        /// 只配置指定 Agent：`claude-code` | `cursor` | `zed` | `opencode` | `zcode`。
+        #[arg(long)]
+        agent: Option<String>,
+        /// 只打印将写入的文件与内容，不落盘。
+        #[arg(long)]
+        dry_run: bool,
+        /// 写入用户级全局配置；默认写项目级（当前目录）。
+        #[arg(long)]
+        global: bool,
+        /// 已存在但内容不同（如旧 cargo run 模板）时覆盖。
+        #[arg(long)]
+        force: bool,
+    },
     /// 启动 MCP stdio server。
     Mcp,
 }

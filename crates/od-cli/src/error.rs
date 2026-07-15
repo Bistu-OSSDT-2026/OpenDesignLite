@@ -15,6 +15,8 @@ use od_core::OdError;
 use od_mcp::error::McpError;
 use od_preview::PreviewError;
 
+use crate::commands::setup::SetupError;
+
 #[derive(Debug)]
 pub enum CliError {
     /// 内核错误（init / new / handoff / export 命令产生）。
@@ -23,6 +25,8 @@ pub enum CliError {
     Preview(PreviewError),
     /// MCP server 错误（mcp 命令产生）。
     Mcp(McpError),
+    /// Agent 配置错误（setup 命令产生）。
+    Setup(SetupError),
 }
 
 impl CliError {
@@ -32,6 +36,7 @@ impl CliError {
             CliError::Core(e) => e.code(),
             CliError::Preview(e) => e.code(),
             CliError::Mcp(e) => e.code(),
+            CliError::Setup(e) => e.code(),
         }
     }
 }
@@ -42,6 +47,7 @@ impl std::fmt::Display for CliError {
             CliError::Core(e) => std::fmt::Display::fmt(e, f),
             CliError::Preview(e) => std::fmt::Display::fmt(e, f),
             CliError::Mcp(e) => std::fmt::Display::fmt(e, f),
+            CliError::Setup(e) => std::fmt::Display::fmt(e, f),
         }
     }
 }
@@ -52,7 +58,14 @@ impl std::error::Error for CliError {
             CliError::Core(e) => Some(e),
             CliError::Preview(e) => Some(e),
             CliError::Mcp(e) => Some(e),
+            CliError::Setup(e) => Some(e),
         }
+    }
+}
+
+impl From<SetupError> for CliError {
+    fn from(e: SetupError) -> Self {
+        CliError::Setup(e)
     }
 }
 

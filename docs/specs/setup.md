@@ -105,7 +105,7 @@
 | Code | 场景 |
 |------|------|
 | `agent_not_detected` | 未检测到任何 Agent，或 `--agent` 指定的 Agent 未安装。 |
-| `config_parse_failed` | 已存在的目标配置文件不是合法 JSON（Zed settings.json 含注释时按 JSONC 宽松解析，解析仍失败才报错）。 |
+| `config_parse_failed` | 已存在的目标配置文件不是合法 JSON。含注释的 JSONC（如 Zed settings.json）v1 不做「剥注释重写」——那会毁掉用户注释——直接报错并提示手工添加条目。 |
 | `config_write_failed` | 目标文件不可写。 |
 
 ## 与仓库内 `.mcp.json` / `CLAUDE.md` 的关系

@@ -95,6 +95,71 @@ fn dispatch(command: &Command, reporter: &Reporter) -> Result<()> {
                 result.out.display()
             ));
         }
+        Command::Setup {
+            agent,
+            dry_run,
+            global,
+            force,
+        } => {
+            use commands::setup::SetupStatus;
+            let outcomes = commands::setup::run(&commands::setup::SetupOptions {
+                agent: agent.as_deref(),
+                dry_run: *dry_run,
+                global: *global,
+                force: *force,
+            })?;
+            reporter.json_value(json!({
+                "ok": true,
+                "results": outcomes.iter().map(|o| json!({
+                    "agent": o.agent,
+                    "path": o.path,
+                    "status": match o.status {
+                        SetupStatus::Written => "written",
+                        SetupStatus::AlreadyConfigured => "already_configured",
+                        SetupStatus::WouldWrite => "would_write",
+                        SetupStatus::NeedsForce => "needs_force",
+                    },
+                })).collect::<Vec<_>>(),
+            }));
+            for o in &outcomes {
+                match o.status {
+                    SetupStatus::Written => {
+                        reporter.info(&format!("{}: wrote {}", o.agent, o.path.display()));
+                    }
+                    SetupStatus::AlreadyConfigured => {
+                        reporter.info(&format!(
+                            "{}: already configured ({})",
+                            o.agent,
+                            o.path.display()
+                        ));
+                    }
+                    SetupStatus::WouldWrite => {
+                        reporter.info(&format!(
+                            "{}: would write {} (dry-run):",
+                            o.agent,
+                            o.path.display()
+                        ));
+                        if let Some(preview) = &o.preview {
+                            reporter.info(preview);
+                        }
+                    }
+                    SetupStatus::NeedsForce => {
+                        reporter.warn(&format!(
+                            "{}: {} already has an `open-design-lite` entry with different \
+                             content (e.g. an old `cargo run` template); rerun with --force to overwrite",
+                            o.agent,
+                            o.path.display()
+                        ));
+                    }
+                }
+            }
+            let written = outcomes
+                .iter()
+                .any(|o| matches!(o.status, SetupStatus::Written));
+            if written {
+                reporter.info("restart the agent for MCP tools to appear");
+            }
+        }
         Command::Skill { action, json } => {
             let cwd = std::env::current_dir()?;
             let skill_json = commands::skill::wants_json(reporter.json, *json, action.as_ref());

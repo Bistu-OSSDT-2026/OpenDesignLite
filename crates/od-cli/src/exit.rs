@@ -23,6 +23,8 @@ pub fn code_for(err: &CliError) -> i32 {
         CliError::Core(e) => code_for_core(e),
         CliError::Preview(e) => code_for_preview(e),
         CliError::Mcp(e) => code_for_mcp(e),
+        // setup 错误复用「一般错误 = 1」（cli.md）。
+        CliError::Setup(_) => GENERAL,
     }
 }
 

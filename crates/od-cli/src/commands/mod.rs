@@ -7,4 +7,5 @@ pub mod handoff;
 pub mod init;
 pub mod new;
 pub mod preview;
+pub mod setup;
 pub mod skill;
