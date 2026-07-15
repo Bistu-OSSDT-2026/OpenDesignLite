@@ -1,22 +1,24 @@
 # Preview
 
-**状态**：已接入 CLI（错误页细节仍需继续完善）  
-**里程碑**：M1  
+**状态**：已接入 CLI；2026-07-14 修订：新增深色壳、固定视口、稳定性规则（实现进行中）  
+**里程碑**：M1（壳与稳定性属 M2 收尾）  
 **实现位置**：`crates/od-preview`（由 `odl preview` 与 MCP `artifact_preview` 共用拉起）
 
 ## 目的
 
-定义本地预览行为：如何打开 HTML、Markdown、Slides artifact，如何监听文件变化，如何刷新 WebView，如何展示错误页。M1 默认技术为 `wry` + 系统 WebView，外部浏览器作为 fallback。
+定义本地预览行为：如何打开 HTML、Markdown、Slides artifact，如何监听文件变化，如何刷新 WebView，如何展示错误页。默认技术为 `wry` + 系统 WebView，外部浏览器作为 fallback。
 
 ## 范围
 
 - 包含 artifact 类型检测。
-- 包含 WebView 加载策略。
+- 包含 WebView 加载策略（custom protocol + 壳页面 iframe）。
+- 包含窗口尺寸与视口规则。
 - 包含 Markdown 渲染路径。
 - 包含文件监听与刷新策略。
 - 包含错误页与 fallback。
+- 包含稳定性规则（stdio、崩溃日志、单实例锁）。
 - 不包含 PDF 导出，见 [export.md](export.md)。
-- 预览是一个纯粹的产物预览窗口，不含产品级交互 UI（交互发生在编码 Agent 里）。
+- 预览窗口由**深色壳（shell）**包裹产物内容区；壳只承载展示性信息（产物名、类型、reload 状态）与 design agent 面板**占位**，不含任何会改动产物的交互 UI（改动发生在编码 Agent 里）。
 
 ## 技术栈
 
@@ -48,13 +50,52 @@ odl preview <artifact-dir>
 
 ## 加载策略
 
-| Artifact | M1 加载方式 | 后续 |
-|----------|-------------|------|
-| HTML | `file:///<artifact>/index.html` | custom protocol `odl://artifact/...` |
-| Slides | `file:///<artifact>/slides.html` | custom protocol + print CSS |
-| Markdown | `comrak` 渲染、`ammonia` 清洗、`minijinja` 包装为临时 HTML 后加载 | 虚拟协议、TOC、代码高亮 |
+2026-07-14 修订：M1 的 `file://` 直接加载被 **custom protocol + 壳页面 iframe** 替换（原表中的「后续」列已实现）：
 
-M1 可以使用 `file://`，但不能向 artifact 页面暴露 native IPC。custom protocol 是后续安全增强，不阻塞 M1。
+| Artifact | 加载方式 |
+|----------|----------|
+| HTML | 壳页面 `odl-shell://shell/index.html`，内容区 iframe 加载 `odl-shell://shell/artifact/index.html` |
+| Slides | 同上，iframe 加载 `odl-shell://shell/artifact/slides.html` |
+| Markdown | `comrak` 渲染、`ammonia` 清洗后写入 `.odl/preview.html`；iframe 的 artifact 入口映射到该文件 |
+
+规则：
+
+- custom protocol handler 把 `odl-shell://shell/artifact/<rel>` 映射到 `artifact_root/<rel>`；`<rel>` 规范化后必须仍在 `artifact_root` 内，越权返回 404（复用 `od-core` export 的 `strip_prefix` 校验模式）。
+- MIME 按扩展名给出（`text/html` / `text/css` / `image/*` 等），未知扩展名 `application/octet-stream`。
+- 壳页面本身由内嵌资源提供（`include_str!`），不落盘、不依赖 artifact 文件。
+- 不向 artifact 页面暴露 native IPC。
+- **降级路径**：若 custom protocol + iframe 在目标平台 WebView 上不可行（spike 验证不通过），退回 `file://` 直接加载 + 初始化脚本注入壳样式的方案，本 spec 相应回改。
+
+## 窗口与视口
+
+窗口按 artifact 类型使用**固定尺寸、不可缩放**（`with_resizable(false)` + min/max inner size 双保险）。内容区（iframe 视口）尺寸即部署后浏览器视口尺寸——**所见即部署后所得**，这是「锁 16:9」产品要求在预览层的体现（导出层的对应保证见 [export.md](export.md) Slides PDF 规则）：
+
+| Artifact | 内容区（CSS 像素） | 说明 |
+|----------|--------------------|------|
+| Slides | 1280 × 720 | 精确 16:9 |
+| HTML / Markdown | 1366 × 768 | 桌面标准视口 |
+
+- 窗口外尺寸 = 内容区尺寸 + 壳的固定边距（顶栏高度等设计常量），保证内容区是精确目标尺寸而不是近似值。
+- 壳采用深色 chrome：顶栏显示产物名（取自 `manifest.json`，缺省用目录名）、kind、reload 状态指示点。
+
+## 稳定性
+
+预览与 MCP server 的进程边界规则（修复「预览一弹 server 就崩」类问题的硬性约束）：
+
+- **stdio 隔离（硬性规则）**：MCP spawn `odl preview` 子进程时**必须**重定向 stdio——stdin 置空，stdout/stderr 重定向到 `<artifact>/.odl/preview.log`。**禁止继承 server 自身的 stdio**（server 的 stdin/stdout 是 JSON-RPC 通道，子进程任何输出都会污染协议流）。
+- **崩溃检测**：spawn 后短暂等待并 `try_wait()`；子进程已退出 → 读取 `preview.log` 尾部并返回 `preview_crashed`，不得假装成功。
+- **崩溃日志**：预览进程入口安装 panic hook，panic 信息与 backtrace 写入 `<artifact>/.odl/preview.log`。
+- **WebView2 user data folder**：固定指向每用户目录（如 `%LOCALAPPDATA%/OpenDesignLite/webview2-data`），全部预览实例共享持久复用；避免默认临时目录被多进程抢占。
+- **自动 fallback**：WebView 初始化失败时自动尝试外部浏览器 fallback，两者都失败才报 `fallback_failed`。
+- **单实例锁**：`<artifact>/.odl/preview.lock`（含心跳 mtime）。同一 artifact 目录重复 preview 时命中有效锁 → 不弹第二个窗口，MCP 返回 `alreadyRunning: true`。锁过期（心跳超时）视为无效，正常拉起。清理不依赖 graceful shutdown，由下次启动按心跳过期兜底。
+
+## 预留位置（不实现）
+
+为后续 M4 BYOK design agent 预留（见 [ADR 0003](../decisions/0003-no-built-in-model-calls.md) 2026-07-14 修订）：
+
+- 壳页面含一个**可折叠聊天面板容器**（初始折叠），内部仅有「Design agent (coming soon)」空态文案。
+- 壳页面全局暴露 `window.__odlShellBridge` **空对象**作为 shell↔agent 桥接接口占位。
+- 仅占位，无任何实现；不引入 LLM 调用、密钥管理或 IPC 逻辑。
 
 ## Markdown 渲染
 
@@ -90,6 +131,8 @@ doc.md
 
 刷新规则：
 
+reload 只刷新内容区 iframe（重设 `src` 并带时间戳绕过缓存），壳与其状态（面板折叠等）不重置。
+
 | 场景 | 行为 |
 |------|------|
 | 主文件变更 | debounce 后 reload。 |
@@ -121,6 +164,7 @@ Debounce 默认 100ms，可在实现中调整到 50-200ms。
 | `webview_failed` | WebView 初始化或加载失败。 |
 | `watch_failed` | watcher 初始化失败；允许继续无 watch 预览。 |
 | `fallback_failed` | 外部浏览器 fallback 失败。 |
+| `preview_crashed` | 预览子进程启动后短时间内退出（由 MCP 层经 `try_wait` + `preview.log` 检测）。 |
 
 ## 外部浏览器 fallback
 
@@ -157,3 +201,4 @@ fallback 行为：
 |------|------|
 | 2026-07-01 | 初版草案。 |
 | 2026-07-08 | 对齐当前实现：`odl preview` 已委托 `od-preview`，Markdown 写入 `.odl/preview.html`，新增 `fallback_failed` 错误码。 |
+| 2026-07-14 | 大修：加载策略改为 custom protocol + 深色壳 iframe；新增「窗口与视口」（按 kind 固定尺寸不可缩放）、「稳定性」（stdio 隔离/崩溃检测/panic 日志/WebView2 data dir/自动 fallback/单实例锁）、「预留位置」（design agent 面板占位 + `__odlShellBridge`）；错误表新增 `preview_crashed`。 |

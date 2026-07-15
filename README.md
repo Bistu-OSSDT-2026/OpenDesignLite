@@ -61,37 +61,44 @@ No separate app, no chat/preview shell to install — **the agent is your UI, th
 
 ## Prerequisites
 
-- **[Rust](https://rustup.rs/)** toolchain (stable, edition 2021)
 - **Windows** (primary target; macOS/Linux builds in CI — Linux preview may need WebKitGTK; see [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md))
 - A compatible coding agent (see [Agent Configuration](#agent-configuration))
+- [Rust](https://rustup.rs/) toolchain — **only if building from source** (contributors)
 
 ---
 
 ## Installation
 
-### Build from Source
+### Quick Install (recommended)
+
+Download the release binary and wire up your agent in two commands:
 
 ```powershell
-# Clone the repository
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/Bistu-OSSDT-2026/OpenDesignLite/master/scripts/install.ps1 | iex
+odl setup
+```
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Bistu-OSSDT-2026/OpenDesignLite/master/scripts/install.sh | sh
+odl setup
+```
+
+The installer places `odl` at `%LOCALAPPDATA%\OpenDesignLite\bin\odl.exe` (Windows) or `~/.local/bin/odl` (Unix). `odl setup` detects your installed coding agents and writes the MCP config for you — no manual JSON editing. Restart the agent afterwards and the four `artifact_*` tools appear. See [docs/specs/setup.md](docs/specs/setup.md) for detection rules and flags (`--agent`, `--dry-run`, `--global`, `--force`).
+
+### Build from Source (contributors)
+
+```powershell
 git clone https://github.com/Bistu-OSSDT-2026/OpenDesignLite.git
 cd OpenDesignLite
-
-# Build all crates
 cargo build --release
 
 # (Windows) If link.exe issues occur, use the helper script:
 powershell -File scripts/build.ps1 build --release
 ```
 
-The release binary will be at `target/release/odl.exe` (Windows) or `target/release/odl` (Unix).
-
-### Verify Installation
-
-```powershell
-cargo run -p od-cli -- --help
-```
-
-You should see subcommands: `init`, `new`, `preview`, `export`, `handoff`, `skill`, `mcp`.
+The release binary will be at `target/release/odl.exe` (Windows) or `target/release/odl` (Unix). Verify with `target/release/odl --help` — you should see subcommands: `init`, `new`, `preview`, `export`, `handoff`, `skill`, `setup`, `mcp`.
 
 ---
 
@@ -103,55 +110,54 @@ The `odl` CLI lets you create and preview artifacts from the terminal:
 
 ```powershell
 # Initialize a workspace
-cargo run -p od-cli -- init my-workspace
+odl init my-workspace
 
 # Create a new HTML artifact
-cargo run -p od-cli -- new html my-workspace/hello
+odl new html my-workspace/hello
 
 # Create a Markdown document
-cargo run -p od-cli -- new docs my-workspace/readme
+odl new docs my-workspace/readme
 
 # Create HTML slides
-cargo run -p od-cli -- new slides my-workspace/deck
+odl new slides my-workspace/deck
 
 # Preview an artifact (opens native live-reload window)
-cargo run -p od-cli -- preview my-workspace/hello
+odl preview my-workspace/hello
 
 # Export an artifact
-cargo run -p od-cli -- export my-workspace/hello --format html   # self-contained HTML
-cargo run -p od-cli -- export my-workspace/readme --format md    # Markdown (docs only)
-cargo run -p od-cli -- export my-workspace --format zip          # ZIP archive
-cargo run -p od-cli -- export my-workspace/hello --format pdf    # PDF (requires Chrome/Edge)
+odl export my-workspace/hello --format html   # self-contained HTML
+odl export my-workspace/readme --format md    # Markdown (docs only)
+odl export my-workspace --format zip          # ZIP archive
+odl export my-workspace/hello --format pdf    # PDF (requires Chrome/Edge; slides export at fixed 16:9)
 ```
+
+(Contributors working from source can substitute `cargo run -p od-cli --` for `odl`.)
 
 ### MCP Mode (Agent-Driven)
 
 Start the MCP server for agent integration:
 
 ```powershell
-cargo run -p od-cli -- mcp
-# Or with the release binary:
 odl mcp
 ```
 
-This starts a JSON-RPC server over stdio that your coding agent connects to. See [Agent Configuration](#agent-configuration) below for setup instructions per agent.
+This starts a JSON-RPC server over stdio that your coding agent connects to. **You normally never run this yourself** — `odl setup` writes the config and the agent launches the server on demand.
 
 ### Agent Configuration
 
-Configure the MCP server in your agent's settings. Choose your agent:
+**Recommended: run `odl setup`** — it detects installed agents and writes these configs for you. The templates below are what it generates; edit them manually only for troubleshooting. Replace `<ODL>` with the absolute path to your installed binary (e.g. `C:/Users/me/AppData/Local/OpenDesignLite/bin/odl.exe` or `~/.local/bin/odl`).
 
 <details>
 <summary><strong>Claude Code</strong></summary>
 
-Add to `~/.claude/claude_desktop_config.json` or project `.mcp.json`:
+Add to project `.mcp.json` (or user-level `~/.claude.json`):
 
 ```json
 {
   "mcpServers": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "cwd": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -167,9 +173,8 @@ Add to `opencode.json`:
 {
   "mcp": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "workdir": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -179,15 +184,14 @@ Add to `opencode.json`:
 <details>
 <summary><strong>Cursor</strong></summary>
 
-Add to Cursor's MCP config (`~/.cursor/mcp.json`):
+Add to Cursor's MCP config (`.cursor/mcp.json` in the project, or `~/.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "cwd": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -204,9 +208,8 @@ Add to Zed's `settings.json`:
   "context_servers": {
     "open-design-lite": {
       "command": {
-        "path": "cargo",
-        "args": ["run", "-p", "od-cli", "--", "mcp"],
-        "work_dir": "/path/to/OpenDesignLite"
+        "path": "<ODL>",
+        "args": ["mcp"]
       }
     }
   }
@@ -217,15 +220,14 @@ Add to Zed's `settings.json`:
 <details>
 <summary><strong>ZCode / Other MCP-compatible agents</strong></summary>
 
-Configure as a stdio MCP server with:
+Configure as a stdio MCP server (`.zcode/mcp.json` or equivalent):
 
 ```json
 {
   "mcpServers": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "cwd": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -234,18 +236,20 @@ Configure as a stdio MCP server with:
 After configuring, restart your agent. You should see `artifact_create`, `artifact_preview`, `artifact_handoff`, and `artifact_export` tools available.
 </details>
 
+> **Do not use `cargo run` in agent configs.** It recompiles on first call (slow) and build output on stdio can corrupt the JSON-RPC stream. If MCP tools appear flaky, check for a leftover `cargo run` config first; `scripts/mcp_proxy.py` remains available as a stdio-isolating debug proxy.
+
 ---
 
 ## MCP Tools Reference
 
 | Tool | Description |
 |------|-------------|
-| `artifact_create` | Create a new artifact (HTML page, Markdown doc, or slides) in a workspace. |
-| `artifact_preview` | Open or refresh the live-reloading preview window for an artifact directory. |
+| `artifact_create` | Create a new artifact (HTML page, Markdown doc, or slides) in a workspace. Auto-opens the preview window by default (`autoPreview: false` to disable). |
+| `artifact_preview` | Open or refresh the live-reloading preview window for an artifact directory. Idempotent: a second call for the same dir returns `alreadyRunning: true` instead of opening a duplicate window. |
 | `artifact_handoff` | Generate or read the `handoff.md` for an artifact — keeps agents and humans in sync. |
-| `artifact_export` | Export an artifact to a portable format: `html`, `md`, `zip`, or `pdf`. |
+| `artifact_export` | Export an artifact to a portable format: `html`, `md`, `zip`, or `pdf` (slides PDF is fixed 16:9). |
 
-**Preview defaults**: `externalBrowser: false`, `watch: true` — uses the MCP-managed `odl` preview window with live-reload. Do not open a system browser yourself; the preview skill handles it (see `skills/preview-via-mcp/SKILL.md`).
+**Preview defaults**: `externalBrowser: false`, `watch: true` — uses the MCP-managed `odl` preview window with live-reload. Do not open a system browser yourself; the preview skill handles it (see `skills/preview-via-mcp/SKILL.md`). The preview is a fixed-size, non-resizable dark-shell window sized per artifact type (slides: 1280×720 16:9 viewport; html/docs: 1366×768) so what you see matches the deployed page.
 
 ---
 
@@ -309,8 +313,9 @@ All detailed documentation is in the [`docs/`](docs/) directory (primarily in Ch
 |-----------|--------|-------|
 | **M0** – Repository Contract | ✅ Done | Docs, scaffold, minimal CLI, skill directories, starter templates |
 | **M1** – Local Artifact Loop | ✅ Done | `init`, `new html\|docs\|slides`, native preview with auto-refresh, handoff |
-| **M2** – Agent Bridging (MCP) | 🚧 Wrapping up | MCP server runnable; agent config and end-to-end client validation in progress |
-| **M3** – Export | ✅ Mostly done | HTML/MD/ZIP/PDF export shipped; single-file HTML (`--single-file`) planned |
+| **M2** – Agent Bridging (MCP) | 🚧 Wrapping up | MCP server runnable; `odl setup` + install script and stability hardening in progress |
+| **M3** – Export | ✅ Mostly done | HTML/MD/ZIP/PDF export shipped (slides PDF fixed 16:9); single-file HTML (`--single-file`) planned |
+| **M4** – BYOK design agent | 📝 Planned | Built-in chat panel in the preview shell with bring-your-own-key; v1 ships UI placeholder only |
 
 See [docs/product/roadmap.md](docs/product/roadmap.md) and [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md) for details.
 

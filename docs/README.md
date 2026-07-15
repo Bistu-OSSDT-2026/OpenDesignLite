@@ -61,37 +61,44 @@
 
 ## 前置条件
 
-- **[Rust](https://rustup.rs/)** 工具链（stable，edition 2021）
 - **Windows** 为主要目标平台；macOS / Linux 已纳入 CI 构建，Linux 预览可能需额外 WebKitGTK 依赖（见 [releases/v0.1.0.md](releases/v0.1.0.md)）
 - 兼容的编码 Agent（见 [Agent 配置](#agent-配置)）
+- [Rust](https://rustup.rs/) 工具链——**仅从源码构建（贡献者）时需要**
 
 ---
 
 ## 安装
 
-### 从源码构建
+### 一键安装（推荐）
+
+两条命令完成二进制下载与 Agent 接入：
 
 ```powershell
-# 克隆仓库
+# Windows（PowerShell）
+irm https://raw.githubusercontent.com/Bistu-OSSDT-2026/OpenDesignLite/master/scripts/install.ps1 | iex
+odl setup
+```
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Bistu-OSSDT-2026/OpenDesignLite/master/scripts/install.sh | sh
+odl setup
+```
+
+安装位置：`%LOCALAPPDATA%\OpenDesignLite\bin\odl.exe`（Windows）/ `~/.local/bin/odl`（Unix）。`odl setup` 自动检测已安装的编码 Agent 并写入 MCP 配置——无需手工编辑 JSON，之后重启 Agent 即可看到四个 `artifact_*` 工具。检测规则与参数（`--agent` / `--dry-run` / `--global` / `--force`）见 [specs/setup.md](specs/setup.md)。
+
+### 从源码构建（贡献者）
+
+```powershell
 git clone https://github.com/Bistu-OSSDT-2026/OpenDesignLite.git
 cd OpenDesignLite
-
-# 构建所有 crate
 cargo build --release
 
 # （Windows）若 link.exe 报错，可使用辅助脚本：
 powershell -File scripts/build.ps1 build --release
 ```
 
-Release 二进制位于 `target/release/odl.exe`（Windows）或 `target/release/odl`（Unix）。
-
-### 验证安装
-
-```powershell
-cargo run -p od-cli -- --help
-```
-
-应列出 `init`、`new`、`preview`、`export`、`handoff`、`skill`、`mcp` 等子命令。
+Release 二进制位于 `target/release/odl.exe`（Windows）或 `target/release/odl`（Unix）。用 `target/release/odl --help` 验证，应列出 `init`、`new`、`preview`、`export`、`handoff`、`skill`、`setup`、`mcp` 子命令。
 
 ---
 
@@ -103,55 +110,54 @@ cargo run -p od-cli -- --help
 
 ```powershell
 # 初始化工作区
-cargo run -p od-cli -- init my-workspace
+odl init my-workspace
 
 # 创建 HTML 产物
-cargo run -p od-cli -- new html my-workspace/hello
+odl new html my-workspace/hello
 
 # 创建 Markdown 文档
-cargo run -p od-cli -- new docs my-workspace/readme
+odl new docs my-workspace/readme
 
 # 创建 HTML 幻灯片
-cargo run -p od-cli -- new slides my-workspace/deck
+odl new slides my-workspace/deck
 
 # 预览产物（打开原生实时重载窗口）
-cargo run -p od-cli -- preview my-workspace/hello
+odl preview my-workspace/hello
 
 # 导出产物
-cargo run -p od-cli -- export my-workspace/hello --format html   # 自包含 HTML 目录
-cargo run -p od-cli -- export my-workspace/readme --format md    # Markdown（仅 docs）
-cargo run -p od-cli -- export my-workspace --format zip          # ZIP 归档
-cargo run -p od-cli -- export my-workspace/hello --format pdf    # PDF（需本机 Chrome/Edge）
+odl export my-workspace/hello --format html   # 自包含 HTML 目录
+odl export my-workspace/readme --format md    # Markdown（仅 docs）
+odl export my-workspace --format zip          # ZIP 归档
+odl export my-workspace/hello --format pdf    # PDF（需本机 Chrome/Edge；slides 固定 16:9）
 ```
+
+（贡献者从源码运行时可用 `cargo run -p od-cli --` 替代 `odl`。）
 
 ### MCP 模式（Agent 驱动）
 
 为 Agent 集成启动 MCP 服务器：
 
 ```powershell
-cargo run -p od-cli -- mcp
-# 或使用 release 二进制：
 odl mcp
 ```
 
-这会在 stdio 上启动 JSON-RPC 服务器，供编码 Agent 连接。各 Agent 的配置见下方 [Agent 配置](#agent-配置)。
+这会在 stdio 上启动 JSON-RPC 服务器，供编码 Agent 连接。**通常不需要手动运行**——`odl setup` 写好配置后由 Agent 按需拉起。
 
 ### Agent 配置
 
-在 Agent 设置中配置 MCP 服务器。选择你的 Agent：
+**推荐直接运行 `odl setup`**——自动检测已安装 Agent 并写入下列配置。以下模板即 `odl setup` 生成的内容，仅在故障排查时手工编辑；`<ODL>` 替换为已安装二进制的绝对路径（如 `C:/Users/me/AppData/Local/OpenDesignLite/bin/odl.exe` 或 `~/.local/bin/odl`）。
 
 <details>
 <summary><strong>Claude Code</strong></summary>
 
-添加到 `~/.claude/claude_desktop_config.json` 或项目 `.mcp.json`：
+添加到项目 `.mcp.json`（或用户级 `~/.claude.json`）：
 
 ```json
 {
   "mcpServers": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "cwd": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -167,9 +173,8 @@ odl mcp
 {
   "mcp": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "workdir": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -179,21 +184,18 @@ odl mcp
 <details>
 <summary><strong>Cursor</strong></summary>
 
-添加到 Cursor MCP 配置（`~/.cursor/mcp.json`）：
+添加到 Cursor MCP 配置（项目 `.cursor/mcp.json` 或 `~/.cursor/mcp.json`）：
 
 ```json
 {
   "mcpServers": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "cwd": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
 ```
-
-生产环境也可指向已构建的 `odl` 二进制，或使用 `scripts/mcp_proxy.py` 做 stdio 代理调试。
 </details>
 
 <details>
@@ -206,9 +208,8 @@ odl mcp
   "context_servers": {
     "open-design-lite": {
       "command": {
-        "path": "cargo",
-        "args": ["run", "-p", "od-cli", "--", "mcp"],
-        "work_dir": "/path/to/OpenDesignLite"
+        "path": "<ODL>",
+        "args": ["mcp"]
       }
     }
   }
@@ -219,15 +220,14 @@ odl mcp
 <details>
 <summary><strong>ZCode / 其他 MCP 兼容 Agent</strong></summary>
 
-配置为 stdio MCP 服务器：
+配置为 stdio MCP 服务器（`.zcode/mcp.json` 或等价位置）：
 
 ```json
 {
   "mcpServers": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "cwd": "/path/to/OpenDesignLite"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -235,6 +235,8 @@ odl mcp
 
 配置完成后重启 Agent。应能看到 `artifact_create`、`artifact_preview`、`artifact_handoff`、`artifact_export` 工具。
 </details>
+
+> **不要在 Agent 配置里使用 `cargo run`**：首次调用会触发编译（慢），且编译输出可能污染 stdio 的 JSON-RPC 流。若 MCP 工具时断时续，先检查是否残留 `cargo run` 配置（`odl setup --force` 覆盖）；`scripts/mcp_proxy.py` 保留为隔离 stdio 的调试代理。
 
 更完整的 Agent 自动安装说明见 [AGENT_SETUP.md](../AGENT_SETUP.md)。
 
@@ -326,8 +328,9 @@ OpenDesignLite/
 |--------|------|------|
 | **M0** – 仓库契约 | ✅ 已完成 | 文档、脚手架、最小 CLI、技能目录、启动模板 |
 | **M1** – 本地产物闭环 | ✅ 基本完成 | `init`、`new html\|docs\|slides`、原生预览与自动刷新、handoff |
-| **M2** – Agent 桥接（MCP） | 🚧 收尾中 | MCP 服务器已可启动；各 Agent 配置与端到端联调待补齐 |
-| **M3** – 导出 | ✅ 基本完成 | HTML/MD/ZIP/PDF 已接入；HTML 单文件内联（`--single-file`）计划中 |
+| **M2** – Agent 桥接（MCP） | 🚧 收尾中 | MCP 服务器已可启动；`odl setup` + 安装脚本与稳定性加固进行中 |
+| **M3** – 导出 | ✅ 基本完成 | HTML/MD/ZIP/PDF 已接入（slides PDF 固定 16:9）；HTML 单文件内联（`--single-file`）计划中 |
+| **M4** – BYOK design agent | 📝 规划中 | 预览壳内置聊天面板 + 自带 API key；v1 仅预留 UI 占位 |
 
 详见 [product/roadmap.md](product/roadmap.md) 与 [releases/v0.1.0.md](releases/v0.1.0.md)。
 

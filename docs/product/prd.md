@@ -4,11 +4,11 @@
 
 本地设计助手，**通过 MCP 接入编码 Agent**，让用户一句话就能创建、润色、预览、交接小型产物（HTML 页面、Markdown 文档、HTML 幻灯片）。Agent 是交互界面，预览是自动弹出的常驻窗口。
 
-不是 Web 平台，不是 Figma 替代品，也不自带对话/预览 app。体验应像给 Agent 加一个能力，而非启动一套平台。
+**定位关键词：简单好部署、快速安装、快速使用。** 不是 Web 平台，不是 Figma 替代品，也不自带对话/预览 app。体验应像给 Agent 加一个能力，而非启动一套平台。
 
 ## 问题
 
-重型 AI 设计工具启动慢、配置重，对日常轻量任务过度设计：
+重型 AI 设计工具启动慢、配置重，对日常小型任务过度设计：
 
 - 快速 HTML 原型
 - 润色文档
@@ -16,20 +16,21 @@
 - 预览并微调
 - 交给编码 Agent 继续实现
 
-用户要的是**速度**和**低门槛**。
+用户要的是**速度**和**低门槛**。低门槛不止运行时轻，更指**从零到可用的路径短**：一条命令安装、一条命令接入 Agent，不要求用户理解 MCP 协议或手工编辑 JSON 配置。
 
 ## 目标
 
 | 目标 | 验收直觉 |
 |------|----------|
-| 本地运行，冷启动快 | 小工具级启动感 |
+| 快速安装 | 一条命令安装 release 二进制；从下载到 `odl setup` 完成 < 1 分钟 |
+| 配置极简 | 运行 `odl setup` 自动写入 Agent 的 MCP 配置，无需手工编辑 JSON |
 | 一分钟内可预览产物 | 一句话 → 有文件 → 自动弹出预览 |
 | 产物即普通文件 | 可直接用编辑器打开、git 管理 |
 | Agent 友好 | MCP 为主通道，CLI / handoff.md 为辅 |
-| 配置极简 | Agent 里配一次 MCP 即开箱即用 |
-| 原生预览 | 无需浏览器标签页或 dev server |
+| 原生预览 | 无需浏览器标签页或 dev server；所见即部署后所得（固定视口） |
 | 三种模式做精 | HTML、文档、幻灯片 |
-| 默认更好看 | 内置轻量 design kernel，而不是裸 HTML |
+| 默认更好看 | 内置轻量 design kernel + 深色预览壳，而不是裸 HTML |
+| 本地运行，冷启动快 | 小工具级启动感 |
 
 ## 非目标
 
@@ -39,6 +40,7 @@
 - 重型项目管理
 - 通用编码 Agent 替代品
 - v1 完整可视化编辑器
+- v1 内置 design agent 对话（BYOK design agent 规划为后续里程碑 M4，v1 仅在预览壳中预留聊天面板占位与接口，见 [ADR 0003](../decisions/0003-no-built-in-model-calls.md)）
 - 内置 React/Tailwind/shadcn/ui/Radix/Web Components 运行时
 - 需要 dev server 或前端构建链才能预览的设计系统
 
@@ -101,11 +103,11 @@
 
 ## 核心工作流
 
-1. 在编码 Agent 里配好 `open-design-lite` MCP server（一次性）
+1. 运行安装脚本获取二进制 → `odl setup` 自动检测并写入编码 Agent 的 MCP 配置（一次性）
 2. 一句话向 Agent 描述需求（HTML / 文档 / 幻灯片）
 3. Agent 调 MCP tool（`artifact_create`）创建产物工作区（纯文件）
 4. 应用轻量 design kernel 的默认视觉约束
-5. `artifact_preview` 自动弹出常驻预览窗口
+5. `artifact_create` 成功后默认自动弹出常驻预览窗口（`autoPreview`，可关；也可显式调 `artifact_preview`）
 6. 用户在 Agent 交互界面继续微调，Agent 经 MCP 改文件
 7. 预览窗口随文件变化实时刷新
 8. 导出或生成 `handoff.md` 交接给其他 Agent

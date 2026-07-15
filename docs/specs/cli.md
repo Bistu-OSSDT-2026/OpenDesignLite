@@ -82,7 +82,7 @@ odl [GLOBAL_FLAGS] <COMMAND> [ARGS]
 - 写对应主文件。
 - 写 `handoff.md`。
 - 默认写 `assets/od-design.css`。
-- 不启动预览。
+- 不启动预览。（注意与 MCP 侧差异：`artifact_create` 默认 `autoPreview: true` 自动弹预览，CLI `odl new` 面向脚本化场景，维持不自动弹，见 [mcp.md](mcp.md)。）
 
 ### `odl preview <dir>`
 
@@ -141,6 +141,27 @@ odl [GLOBAL_FLAGS] <COMMAND> [ARGS]
 - 无 action 时列出 `name | mode | description`。
 - `show` 输出 skill 正文；JSON 模式包含 `name`、`mode`、`description`、`body`、`root`。
 - skill 发现复用 `od-core::skill::discover`，工作区同名 skill 覆盖内置 skill。
+
+### `odl setup`
+
+自动检测本机已安装的编码 Agent 并写入 `open-design-lite` MCP server 配置，替代手工编辑 JSON。详细检测规则、各 Agent 配置形状与合并策略见 [setup.md](setup.md)。
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `--agent <name>` | 全部检测到的 | 只配置指定 Agent（`claude-code`、`cursor`、`zed`、`opencode`、`zcode`）。 |
+| `--dry-run` | false | 只打印将写入的文件与内容，不落盘。 |
+| `--global` | false | 写入用户级全局配置；默认写项目级配置（当前目录）。 |
+| `--force` | false | 已存在 `open-design-lite` 条目但内容不同（如指向旧的 `cargo run`）时覆盖。 |
+
+行为：
+
+- MCP `command` 使用当前 `odl` 二进制的绝对路径（`current_exe()`），不使用 `cargo run`。
+- JSON 深合并：只新增/更新 `open-design-lite` 这一个 key，其余已有 server 配置原样保留。
+- 幂等：重复运行结果一致；已存在且内容相同则跳过。
+- 目标配置文件不是合法 JSON → `config_parse_failed`；不可写 → `config_write_failed`；`--agent` 指定但未检测到 → `agent_not_detected`。
+- 退出码复用「一般错误 = 1」。
 
 ### `odl mcp`
 
@@ -211,3 +232,4 @@ odl [GLOBAL_FLAGS] <COMMAND> [ARGS]
 | 2026-07-08 | 对齐当前 CLI：preview/handoff/skill 已实现，export 仍为 M3 占位。 |
 | 2026-07-09 | 补充 `odl mcp` 命令契约，与现有 stdio server 对齐。 |
 | 2026-07-09 | `odl export` 接入：html / md / zip / pdf（本机浏览器）。 |
+| 2026-07-14 | 新增 `odl setup` 命令契约（详见 setup.md）；注明 `odl new` 与 MCP `artifact_create` 的 autoPreview 行为差异。 |

@@ -17,7 +17,8 @@ Specs 是实现契约。每份 spec 必须可测试、无歧义，并说明哪�
 | [release-checklist](release-checklist.md) | Product & Kernel Lead | M1 末 | M1 发布前检查清单 |
 | [mcp](mcp.md) | Product & Kernel Lead | M2 | stdio server + create/preview/handoff/export 已接入；客户端配置/联调待收尾 |
 | [smoke-prompts](smoke-prompts.md) | Skills & Templates | M2 | 草案 |
-| [export](export.md) | Export & Packaging | M3 | 已实现 |
+| [setup](setup.md) | Product & Kernel Lead | M2 收尾 | 草案（`odl setup` + 安装脚本契约） |
+| [export](export.md) | Export & Packaging | M3 | 已实现（2026-07-14 新增 Slides PDF 16:9 规则） |
 
 ## 已采纳技术栈边界
 
@@ -70,3 +71,4 @@ Specs 是实现契约。每份 spec 必须可测试、无歧义，并说明哪�
 | 日期 | 变更 |
 |------|------|
 | 2026-07-01 | 根据技术栈调研补齐 specs 草案，并新增 design-kernel spec。 |
+| 2026-07-14 | 新增 setup spec；preview（壳/固定视口/稳定性）、mcp（autoPreview/stdio 隔离）、export（Slides PDF 16:9）、cli（`odl setup`）同步修订。 |

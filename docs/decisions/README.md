@@ -4,7 +4,7 @@
 |-----|------|------|
 | [0001](0001-binary-shell-first.md) | MCP 优先 / Agent 驱动 | 已采纳 |
 | [0002](0002-lightweight-design-kernel.md) | 轻量 Design Kernel | 已采纳 |
-| [0003](0003-no-built-in-model-calls.md) | v1 不内置模型调用 / 仅编排外部 Agent | 已采纳 |
+| [0003](0003-no-built-in-model-calls.md) | v1 不内置模型调用 / 仅编排外部 Agent | 已采纳（2026-07-14 修订：BYOK design agent 规划为 M4，v1 仅预留占位） |
 
 ## 开放项（待新 ADR）
 

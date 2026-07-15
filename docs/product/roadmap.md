@@ -52,4 +52,12 @@
 
 依赖 spec：[export](../specs/export.md)
 
-> **不在 v1 范围**：内置模型调用 / BYOK 生成链路已放弃，产品只编排外部 Agent（见 [ADR 0003](../decisions/0003-no-built-in-model-calls.md)）。
+## M4：BYOK design agent（规划中）
+
+预览壳内置聊天面板 + 用户自带 API key 的 design agent。v1 仅在预览壳中预留 UI 占位与接口边界（可折叠面板、`window.__odlShellBridge`），不实现 LLM 调用。启动前需新增 ADR 明确 provider 抽象、密钥存储与 shell↔agent 通信方案（见 [ADR 0003](../decisions/0003-no-built-in-model-calls.md) 2026-07-14 修订）。
+
+- [ ] design agent ADR（provider 抽象 / 密钥存储 / IPC）
+- [ ] 壳内聊天面板从占位变为可用
+- [ ] BYOK 密钥配置与安全存储
+
+> **不在 v1 范围**：v1 不内置模型调用，产品只编排外部 Agent；BYOK design agent 是 M4 的目标而非 v1 承诺（见 [ADR 0003](../decisions/0003-no-built-in-model-calls.md)）。

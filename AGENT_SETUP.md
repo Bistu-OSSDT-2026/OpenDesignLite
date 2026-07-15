@@ -14,53 +14,40 @@ Open Design Lite (`odl`) is a **local-first design assistant** that you (the cod
 
 ## Quick Auto-Install
 
-Run these steps to get Open Design Lite ready on the user's machine:
+Two steps — no Rust toolchain, no clone, no manual JSON editing:
 
-### Step 1: Check Prerequisites
+### Step 1: Install the Binary
 
-Verify Rust is installed. If not, guide the user to install it:
-
-```bash
-rustc --version
-cargo --version
-```
-
-If missing: direct user to https://rustup.rs/ or run `winget install Rustlang.Rustup` (Windows).
-
-### Step 2: Clone and Build
-
-```bash
-git clone https://github.com/Bistu-OSSDT-2026/OpenDesignLite.git
-cd OpenDesignLite
-cargo build --release
-```
-
-On Windows, if linking fails with `link: extra operand`, use the helper:
 ```powershell
-powershell -File scripts/build.ps1 build --release
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/Bistu-OSSDT-2026/OpenDesignLite/master/scripts/install.ps1 | iex
 ```
-
-### Step 3: Verify the Build
 
 ```bash
-cargo run -p od-cli -- --help
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Bistu-OSSDT-2026/OpenDesignLite/master/scripts/install.sh | sh
 ```
 
-Expected: help text listing subcommands (`init`, `new`, `preview`, `export`, `handoff`, `skill`, `mcp`).
+The binary lands at `%LOCALAPPDATA%\OpenDesignLite\bin\odl.exe` (Windows) or `~/.local/bin/odl` (Unix). If the install directory is not on PATH, the script prints instructions — use the absolute path in the meantime.
 
-### Step 4: Configure MCP
+### Step 2: Configure MCP
 
-Add this MCP server configuration to the user's agent config file. Use the **absolute path** to the cloned repository.
+```bash
+odl setup
+```
 
-**Template** (fill in `$REPO_PATH` with the actual clone path):
+This detects installed agents (Claude Code, Cursor, OpenCode, Zed, ZCode) and writes the `open-design-lite` MCP server entry into their config, pointing at the installed binary. Useful flags: `--agent <name>` (single agent), `--dry-run` (print without writing), `--global` (user-level config), `--force` (overwrite a stale entry, e.g. an old `cargo run` template). Full contract: [docs/specs/setup.md](docs/specs/setup.md).
+
+After setup, **restart the agent** for MCP tools to appear.
+
+**Manual fallback** (troubleshooting only — this is what `odl setup` generates; `<ODL>` = absolute binary path):
 
 ```json
 {
   "mcpServers": {
     "open-design-lite": {
-      "command": "cargo",
-      "args": ["run", "-p", "od-cli", "--", "mcp"],
-      "cwd": "$REPO_PATH"
+      "command": "<ODL>",
+      "args": ["mcp"]
     }
   }
 }
@@ -70,13 +57,19 @@ Add this MCP server configuration to the user's agent config file. Use the **abs
 
 | Agent | Config File |
 |-------|-------------|
-| Claude Code | `~/.claude/claude_desktop_config.json` or project `.mcp.json` |
+| Claude Code | project `.mcp.json` or user-level `~/.claude.json` |
 | Codex / OpenCode | `opencode.json` → `mcp` section |
-| Cursor | `~/.cursor/mcp.json` |
-| Zed | `settings.json` → `context_servers` section |
+| Cursor | `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` |
+| Zed | `settings.json` → `context_servers` section (nested `command: {path, args}`) |
 | ZCode | `.zcode/mcp.json` or workspace MCP settings |
 
-After adding the config, **restart the agent** for MCP tools to appear.
+> **Do NOT configure `cargo run` as the MCP command.** It recompiles on first call and build output on stdio can corrupt the JSON-RPC stream.
+
+> Note: the `.mcp.json` + `CLAUDE.md` inside the OpenDesignLite repo itself only serve the dogfood case (working on this repo). For everyday use in the user's own projects, always go through `odl setup`.
+
+### Contributor Path (Build from Source)
+
+Only needed when working on OpenDesignLite itself: install Rust (https://rustup.rs/), `git clone`, `cargo build --release` (Windows link.exe issues → `powershell -File scripts/build.ps1 build --release`). The binary is `target/release/odl`.
 
 ---
 
@@ -93,7 +86,7 @@ Create a new artifact in a workspace.
 - `workspace` (string, optional): workspace directory path
 - `visualBrief` (string, optional): `"editorial"`, `"studio"`, or `"workbench"` (default: `"editorial"`)
 
-**What it does:** Creates a directory with starter files (`index.html`, `assets/od-design.css`, `manifest.json`, `handoff.md`) based on the chosen mode and visual brief.
+**What it does:** Creates a directory with starter files (`index.html`, `assets/od-design.css`, `manifest.json`, `handoff.md`) based on the chosen mode and visual brief. By default it also auto-opens the preview window (`autoPreview: true`); pass `autoPreview: false` for CI/scripted runs. The response includes a `nextStep` hint.
 
 **Example call:**
 ```json
@@ -117,6 +110,8 @@ Open or refresh the live-reloading preview window.
 - **Always** use this tool to preview — NEVER open a system browser yourself (`start`, `xdg-open`, `open`, Playwright, etc.).
 - Keep defaults (`externalBrowser: false`, `watch: true`) unless the user explicitly asks otherwise.
 - After the first preview, file edits trigger automatic live-reload; only call again if the window was closed.
+- Calling it again for the same dir is safe: it returns `alreadyRunning: true` instead of opening a duplicate window.
+- The window is fixed-size per artifact type (slides: 1280×720 16:9; html/docs: 1366×768) and not resizable — content renders at the exact deployed-viewport size.
 
 **Example call:**
 ```json
@@ -223,11 +218,12 @@ These apply to **all** artifacts regardless of mode or brief:
 
 | Problem | Solution |
 |---------|----------|
-| `cargo: command not found` | Rust not installed. Run `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
-| `link: extra operand` (Windows) | Use `powershell -File scripts/build.ps1 build --release` instead of `cargo build` |
-| MCP tools not appearing in agent | Restart the agent after adding MCP config; verify `cwd` is an absolute path |
-| Preview window doesn't open | Ensure `externalBrowser` is `false`; check that the artifact directory exists |
+| `odl: command not found` | Install dir not on PATH — use the absolute binary path, or add the dir printed by the install script |
+| MCP tools not appearing in agent | Restart the agent after `odl setup`; run `odl setup --dry-run` to verify what was written |
+| MCP tools flaky / server dies when preview opens | Check the config is **not** using `cargo run` (recompile output corrupts the stdio JSON-RPC stream) — rerun `odl setup --force`; `scripts/mcp_proxy.py` is a stdio-isolating debug proxy for diagnosis |
+| Preview window doesn't open | Ensure `externalBrowser` is `false`; check the artifact directory exists; a `preview_crashed` error includes the tail of `<dir>/.odl/preview.log` |
 | Preview doesn't live-reload | `watch` must be `true` (default); check file watcher limits on your OS |
+| `link: extra operand` (Windows, source build) | Use `powershell -File scripts/build.ps1 build --release` instead of `cargo build` |
 
 ---
 

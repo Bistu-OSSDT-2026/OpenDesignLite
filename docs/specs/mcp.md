@@ -40,9 +40,12 @@
   "dir": "D:/work/demo",
   "title": "Demo",
   "visualBrief": "editorial",
-  "overwrite": false
+  "overwrite": false,
+  "autoPreview": true
 }
 ```
+
+`autoPreview` 可选，默认 `true`：创建成功后自动 spawn 预览窗口（等价随后调一次 `artifact_preview`）。无 GUI 环境或 spawn 失败时**降级不报错**——create 本身仍成功，仅在响应中注明预览未启动。CI/自动化场景传 `false` 关闭。
 
 输出：
 
@@ -53,9 +56,12 @@
     "root": "D:/work/demo",
     "primaryFile": "index.html",
     "handoff": "handoff.md"
-  }
+  },
+  "nextStep": "Preview window opened. Edit files under D:/work/demo and it live-reloads. If no window appeared, call artifact_preview with dir=\"D:/work/demo\"."
 }
 ```
+
+`nextStep` 可选（additive，向后兼容）：给 agent 的下一步提示文案；autoPreview 关闭或降级时提示改为「调用 `artifact_preview`」。
 
 ## `artifact_preview`
 
@@ -76,11 +82,16 @@ Coding agent 的**必选预览路径**：调用本工具打开持久、可 live-
 ```json
 {
   "started": true,
-  "mode": "webview"
+  "mode": "webview",
+  "alreadyRunning": false
 }
 ```
 
+`alreadyRunning` 可选（additive，向后兼容）：命中单实例锁（同一 artifact 目录已有存活预览窗口）时为 `true`，此时不重复弹窗，仍返回 `started: true`。
+
 如果当前进程环境不能打开 GUI，应返回明确错误，不应阻塞 MCP server。
+
+**stdio 隔离（硬性规则）**：spawn `odl preview` 子进程时必须重定向 stdio——stdin 置空、stdout/stderr 重定向到 `<dir>/.odl/preview.log`，**禁止 `Stdio::inherit()`**。server 的 stdin/stdout 是 JSON-RPC 通道，子进程任何输出都会污染协议流，这是历史上「预览一弹 server 就崩」的根因，不得回退。spawn 后须 `try_wait()` 检测子进程是否立即退出，已退出返回 `preview_crashed`（附 `preview.log` 尾部内容），不得假装成功。
 
 ## `artifact_handoff`
 
@@ -136,6 +147,7 @@ MCP SDK 的错误对象必须包含稳定 code：
 | `artifact_not_found` | artifact 目录不存在。 |
 | `manifest_invalid` | manifest 无法解析。 |
 | `preview_unavailable` | 无法打开 WebView 或 fallback。 |
+| `preview_crashed` | 预览子进程 spawn 成功但短时间内退出。 |
 | `format_unsupported` | artifact kind 不支持目标格式，或未知 format。 |
 | `export_failed` | 一般导出失败。 |
 | `pdf_backend_missing` | 找不到本机 Chrome/Edge PDF 后端。 |
@@ -156,6 +168,10 @@ MCP SDK 的错误对象必须包含稳定 code：
 - `artifact_create` 结果与 CLI `new` 一致。
 - 无效 kind 返回 `invalid_args`。
 - `artifact_preview` 在无 GUI 环境返回明确错误。
+- spawn 的预览子进程不继承 server stdio（stdin null、stdout/stderr 落 `preview.log`）。
+- 子进程 spawn 后立即退出 → `preview_crashed`，不返回 `started: true`。
+- 同一 dir 重复 preview → 第二次返回 `alreadyRunning: true`，不弹第二个窗口。
+- `artifact_create` 默认自动弹预览；`autoPreview: false` 不弹；无 GUI 降级时 create 仍成功。
 
 ## 变更记录
 
@@ -166,3 +182,4 @@ MCP SDK 的错误对象必须包含稳定 code：
 | 2026-07-09 | 同步代码：`serve_stdio()` + `odl mcp` 已接入 create/preview/handoff；记录手写 JSON-RPC 与原 `rmcp` 计划的偏差。 |
 | 2026-07-09 | `artifact_export` 接入 html / md / zip / pdf。 |
 | 2026-07-09 | `artifact_preview` 说明：Agent 必选预览路径，默认不开系统浏览器。 |
+| 2026-07-14 | `artifact_create` 新增 `autoPreview`（默认 true）与 `nextStep`；`artifact_preview` 新增 `alreadyRunning`；错误码新增 `preview_crashed`；写入 stdio 隔离硬性规则。 |
