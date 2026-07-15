@@ -6,7 +6,7 @@
 //! Spec: docs/specs/export.md
 
 use crate::artifact::{detect_kind, Artifact, ArtifactKind, PRIMARY_FILE_ORDER};
-use crate::design::{css_for, VisualBrief, STYLESHEET_ASSET};
+use crate::design::{css_for, css_for_kind, VisualBrief, STYLESHEET_ASSET};
 use crate::manifest::ArtifactManifest;
 use crate::{OdError, Result};
 use std::fs::{self, File};
@@ -433,17 +433,34 @@ fn export_pdf(artifact: &Artifact, out: &Path) -> Result<()> {
 }
 
 fn prepare_pdf_source(artifact: &Artifact, staging: &Path) -> Result<PathBuf> {
-    match artifact.kind {
+    let html = match artifact.kind {
         ArtifactKind::Html | ArtifactKind::Slides => {
             // Copy into staging so relative assets resolve under file://.
             export_html(artifact, staging)?;
-            Ok(staging.join(artifact.kind.primary_file()))
+            staging.join(artifact.kind.primary_file())
         }
         ArtifactKind::Markdown => {
             export_html(artifact, staging)?;
-            Ok(staging.join("doc.html"))
+            staging.join("doc.html")
         }
+    };
+    // PDF 始终按当前内核样式渲染：staging 副本里重写 od-design.css，
+    // 旧产物（创建时无 16:9 打印规则）导出也能拿到；产物原文件一概不动
+    //（export.md：staging 内样式升级）。
+    refresh_design_css(artifact, staging)?;
+    Ok(html)
+}
+
+/// 与 `ensure_design_css`（缺才写）不同：**总是**用当前内核版本重写。
+/// 仅用于 PDF staging 副本，不得作用于产物目录本身。
+fn refresh_design_css(artifact: &Artifact, out: &Path) -> Result<()> {
+    let dest = out.join(STYLESHEET_ASSET);
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent)?;
     }
+    let brief = visual_brief_for(artifact);
+    fs::write(&dest, css_for_kind(brief, artifact.kind))?;
+    Ok(())
 }
 
 fn tempfile_dir(prefix: &str) -> Result<PathBuf> {
@@ -476,6 +493,12 @@ fn canonicalize_for_print(out: &Path) -> Result<PathBuf> {
 fn path_to_file_url(path: &Path) -> Result<String> {
     let abs = path.canonicalize().map_err(OdError::Io)?;
     let mut path_str = abs.to_string_lossy().replace('\\', "/");
+    // Windows canonicalize 会加 \\?\ verbatim 前缀（替换后是 //?/C:/...）。
+    // 带着它拼出的 file:////?/C:/... 里 base URL 是坏的：页面能加载，但
+    // 相对路径的 assets/od-design.css 解析不出来 → PDF 无样式、@page 失效。
+    if let Some(stripped) = path_str.strip_prefix("//?/") {
+        path_str = stripped.to_string();
+    }
     // Windows: C:/... → file:///C:/...
     if path_str.len() >= 2 && path_str.as_bytes().get(1) == Some(&b':') {
         return Ok(format!("file:///{path_str}"));
@@ -720,6 +743,55 @@ mod tests {
         assert_eq!(err.code(), "pdf_backend_missing");
         let msg = err.to_string();
         assert!(msg.contains("Chrome") || msg.contains("Edge"));
+    }
+
+    /// PDF staging 里的 od-design.css 总是被当前内核重写（含 16:9 @page 规则），
+    /// 即使产物自带的是旧版/手改过的样式表；产物原文件不动（export.md）。
+    #[test]
+    fn pdf_staging_refreshes_design_css_without_touching_artifact() {
+        let (_temp, root) = temp_artifact("slides", "deck");
+        let artifact = artifact_from_root(&root).unwrap();
+
+        // 模拟旧产物：CSS 是不含打印规则的旧版本。
+        let artifact_css = root.join(STYLESHEET_ASSET);
+        fs::write(&artifact_css, "/* legacy css, no print rules */").unwrap();
+
+        let staging = tempfile_dir("odl-pdf-staging-test").unwrap();
+        let html = prepare_pdf_source(&artifact, &staging).unwrap();
+        assert!(html.exists());
+
+        let staged_css = fs::read_to_string(staging.join(STYLESHEET_ASSET)).unwrap();
+        assert!(
+            staged_css.contains("@page { size: 13.333in 7.5in; margin: 0; }"),
+            "staging css must carry current 16:9 print rules"
+        );
+        // 产物目录里的原文件保持用户内容不变。
+        let original = fs::read_to_string(&artifact_css).unwrap();
+        assert_eq!(original, "/* legacy css, no print rules */");
+
+        let _ = fs::remove_dir_all(&staging);
+    }
+
+    /// Windows canonicalize 的 `\\?\` 前缀必须剥掉：带前缀的 file:// URL
+    /// 会让浏览器解析不出相对 assets（PDF 无样式、@page 失效的历史根因）。
+    #[test]
+    fn file_url_strips_verbatim_prefix() {
+        let (_temp, root) = temp_artifact("slides", "urlcheck");
+        let url = path_to_file_url(&root.join("slides.html")).unwrap();
+        assert!(!url.contains("//?/"), "verbatim prefix leaked: {url}");
+        assert!(url.starts_with("file://"), "unexpected url: {url}");
+    }
+
+    /// html/docs 的 PDF staging 不携带 @page（纸张维持浏览器默认）。
+    #[test]
+    fn pdf_staging_html_has_no_page_rule() {
+        let (_temp, root) = temp_artifact("html", "page");
+        let artifact = artifact_from_root(&root).unwrap();
+        let staging = tempfile_dir("odl-pdf-staging-html-test").unwrap();
+        prepare_pdf_source(&artifact, &staging).unwrap();
+        let staged_css = fs::read_to_string(staging.join(STYLESHEET_ASSET)).unwrap();
+        assert!(!staged_css.contains("@page"));
+        let _ = fs::remove_dir_all(&staging);
     }
 
     #[test]

@@ -4,6 +4,7 @@
 //! consumer writes the same token and class contract to disk.
 
 use super::brief::VisualBrief;
+use crate::ArtifactKind;
 
 /// Return the default stylesheet for a visual brief.
 pub fn css_for(brief: VisualBrief) -> String {
@@ -14,6 +15,42 @@ pub fn css_for(brief: VisualBrief) -> String {
     };
     format!("{tokens}\n{BASE_CSS}")
 }
+
+/// Kind 感知版本：slides 追加 16:9 固定纸张打印规则，其余 kind 与
+/// `css_for` 一致（`@page` 是全局规则，混进共享 CSS 会波及 html/docs
+/// 的 PDF 纸张，因此只对 slides 产物发出）。
+///
+/// Spec: docs/specs/export.md（Slides PDF 规则）
+pub fn css_for_kind(brief: VisualBrief, kind: ArtifactKind) -> String {
+    match kind {
+        ArtifactKind::Slides => format!("{}\n{SLIDES_PRINT_CSS}", css_for(brief)),
+        _ => css_for(brief),
+    }
+}
+
+/// Slides 打印规则：每页精确 13.333in × 7.5in（16:9）。
+///
+/// 纸张尺寸唯一可靠的控制方式是 CSS `@page`——Chrome/Edge 的 headless CLI
+/// 没有稳定的纸张尺寸开关（`--print-to-pdf-page-size` 不存在，那是
+/// DevTools Protocol 的参数）。`.od-slide` 打印时锁定整页尺寸并
+/// `overflow: hidden`，杜绝溢出触发 Blink 自动分页；末页取消 break
+/// 避免尾部空白页。规则不入 @layer：未分层样式天然胜过分层样式，
+/// 保证覆盖 `od.patterns` 里的 `.od-slide { min-height: 100vh }`。
+const SLIDES_PRINT_CSS: &str = r#"/* Slides print: fixed 16:9 pages (docs/specs/export.md). */
+@page { size: 13.333in 7.5in; margin: 0; }
+@media print {
+  .od-slide {
+    min-height: unset;
+    width: 13.333in;
+    height: 7.5in;
+    margin: 0;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+  }
+  .od-slide:last-of-type { break-after: auto; page-break-after: auto; }
+}
+"#;
 
 const BASE_CSS: &str = r#"@layer od.reset, od.tokens, od.base, od.primitives, od.recipes, od.patterns, od.utilities;
 
@@ -134,6 +171,21 @@ mod tests {
         }
         for class in catalog::all_classes() {
             assert!(css.contains(&format!(".{class}")), "missing class: {class}");
+        }
+    }
+
+    /// Slides PDF 16:9 契约（export.md）：slides 带 `@page` 固定纸张与分页
+    /// 规则；html/docs 不带（`@page` 会波及它们的 PDF 纸张）。
+    #[test]
+    fn slides_css_carries_print_page_rules() {
+        let slides = css_for_kind(VisualBrief::Studio, ArtifactKind::Slides);
+        assert!(slides.contains("@page { size: 13.333in 7.5in; margin: 0; }"));
+        assert!(slides.contains("break-after: page"));
+        assert!(slides.contains(".od-slide:last-of-type"));
+
+        for kind in [ArtifactKind::Html, ArtifactKind::Markdown] {
+            let css = css_for_kind(VisualBrief::Studio, kind);
+            assert!(!css.contains("@page"), "{kind:?} must not carry @page");
         }
     }
 }

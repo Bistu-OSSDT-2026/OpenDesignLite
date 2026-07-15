@@ -4,7 +4,7 @@
 //! handling, manifest writing, and handoff generation for `odl new` and
 //! `artifact_create`.
 
-use crate::design::{css_for, guardrails, VisualBrief, KERNEL_VERSION, STYLESHEET_ASSET};
+use crate::design::{css_for_kind, guardrails, VisualBrief, KERNEL_VERSION, STYLESHEET_ASSET};
 use crate::manifest::{ArtifactManifest, DesignMeta, SCHEMA_VERSION};
 use crate::{handoff, skill, Artifact, ArtifactKind, OdError, Result};
 use std::fs;
@@ -42,14 +42,14 @@ pub fn run(kind_slug: &str, root: &Path, options: CreateOptions<'_>) -> Result<C
         fs::create_dir_all(artifact.assets_dir())?;
         fs::write(
             artifact.assets_dir().join("od-design.css"),
-            css_for(visual_brief),
+            css_for_kind(visual_brief, kind),
         )?;
         Some(STYLESHEET_ASSET.to_string())
     };
 
     let mut primary_content = template;
     if options.embed_css {
-        primary_content = embed_design_css(&primary_content, &css_for(visual_brief));
+        primary_content = embed_design_css(&primary_content, &css_for_kind(visual_brief, kind));
     } else {
         primary_content = link_design_css(&primary_content);
     }

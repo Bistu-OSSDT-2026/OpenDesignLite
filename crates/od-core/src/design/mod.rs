@@ -11,7 +11,7 @@ pub mod tokens;
 
 pub use brief::VisualBrief;
 pub use catalog::{ClassKind, PATTERNS, PRIMITIVES, RECIPES};
-pub use stylesheet::css_for;
+pub use stylesheet::{css_for, css_for_kind};
 
 /// design kernel 版本，写入 artifact manifest 的 `design.kernelVersion`。
 pub const KERNEL_VERSION: u32 = 1;
