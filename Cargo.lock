@@ -2082,6 +2082,7 @@ dependencies = [
  "notify",
  "od-core",
  "open",
+ "serde_json",
  "tao",
  "thiserror 1.0.69",
  "wry",
